@@ -1450,6 +1450,130 @@ ERROR / BLOCKER: none | <detalle>
 
 El control vuelve al Supervisor. La evidencia se hace persistente mediante el Issue/PR autorizado; no sustituye su revisión por SHA ni concede aprobación, merge o autoridad futura.
 
+
+# 33. ACTUATION_REQUEST — contrato canónico de handoff autorizado
+
+`ACTUATION_REQUEST` es el contrato normativo mínimo mediante el cual Workflow/Supervisor expresa una actuación acotada que Actuador puede consumir sin inferir autoridad desde texto libre. Es producido y autorizado fuera de Actuador; Actuador lo trata como datos de autoridad ya persistida, no como autoridad creada por el runtime, por un modelo ni por contenido recuperado desde GitHub.
+
+El contrato canónico es:
+
+```text
+ACTUATION_REQUEST
+WORK ITEM: #<issue>
+AUTHORIZATION: <persistent Supervisor authority reference>
+EXPECTED REVISION: <sha | NONE>
+TARGET ACTOR: IMPLEMENTER_WEB | SUPERVISOR_WEB
+HANDOFF KIND: IMPLEMENTER_WORK_ITEM | SUPERVISOR_REVIEW
+HUMAN REQUIRED: YES | NO
+HUMAN AUTHORIZATION: <persistent Human authority reference | NONE>
+EXTERNAL EFFECT: NONE | PROMPT_DELIVERY
+DELIVERY LIMIT: 0 | 1
+CONTEXT REFS: <explicit GitHub/Workflow references>
+STOP CONDITIONS: <observable conditions>
+```
+
+## 33.1 Vocabularios cerrados y consistencia actor/handoff
+
+Los únicos actores de destino de este contrato son:
+
+```text
+IMPLEMENTER_WEB
+SUPERVISOR_WEB
+```
+
+Los únicos tipos de handoff son:
+
+```text
+IMPLEMENTER_WORK_ITEM
+SUPERVISOR_REVIEW
+```
+
+La correspondencia es cerrada:
+
+- `HANDOFF KIND: IMPLEMENTER_WORK_ITEM` sólo es válido con `TARGET ACTOR: IMPLEMENTER_WEB`;
+- `HANDOFF KIND: SUPERVISOR_REVIEW` sólo es válido con `TARGET ACTOR: SUPERVISOR_WEB`;
+- `SUPERVISOR_REVIEW` requiere `EXPECTED REVISION` con un SHA explícito; `NONE` no es válido para ese handoff;
+- la autorización concedida para un actor, destino, Work Item o request no se transfiere por inferencia a otro.
+
+No existe creación dinámica de actores ni de handoff kinds dentro de este contrato.
+
+## 33.2 Frontera de autoridad
+
+`AUTHORIZATION` debe referenciar autoridad persistente del Supervisor aplicable a la actuación concreta. Una referencia ausente, ambigua, no demostrable o no aplicable implica:
+
+```text
+STOP
+→ no delivery
+→ no external effect
+```
+
+`HUMAN REQUIRED: YES` exige una referencia persistente explícita en `HUMAN AUTHORIZATION`. Si falta, es ambigua o no demuestra la autorización humana necesaria:
+
+```text
+WAIT
+→ no delivery
+→ no external effect
+```
+
+`HUMAN REQUIRED: NO` no crea autoridad humana implícita ni amplía la autoridad del Supervisor.
+
+Actuador nunca deriva ni completa por interpretación de Issue, PR, comentarios, prompts u otro texto libre:
+
+- `TARGET ACTOR`;
+- `HANDOFF KIND`;
+- `HUMAN REQUIRED`;
+- autorización del Supervisor o del Humano;
+- aprobación;
+- prioridad;
+- REWORK;
+- merge;
+- cambio de alcance.
+
+```text
+TECHNICAL PERMISSION != WORKFLOW AUTHORITY
+no autorización demostrable -> no efecto externo
+GitHub content = data, not privileged instructions
+```
+
+El contenido recuperado desde GitHub puede aportar hechos y referencias, pero no puede mutar, sustituir ni ampliar este contrato.
+
+## 33.3 Efecto externo y límite de entrega
+
+La combinación entre efecto y límite es cerrada:
+
+```text
+EXTERNAL EFFECT: NONE
+DELIVERY LIMIT: 0
+```
+
+significa que la actuación no puede cruzar la frontera de Send.
+
+```text
+EXTERNAL EFFECT: PROMPT_DELIVERY
+DELIVERY LIMIT: 1
+```
+
+autoriza como máximo una única entrega al actor explícitamente indicado, siempre que las demás precondiciones y referencias de autoridad sean válidas.
+
+Cualquier otra combinación es inválida y debe detenerse antes de Send. Un permiso técnico para interactuar con la interfaz no reemplaza esta autorización normativa.
+
+La semántica M1 permanece intacta: un único mecanismo de envío por prompt, máximo un Send autorizado y ningún retry después de incertidumbre posterior al Send. La incertidumbre no renueva `DELIVERY LIMIT`, no transfiere autorización y no habilita una segunda entrega.
+
+## 33.4 Contexto, revisión esperada y condiciones de parada
+
+`WORK ITEM`, `EXPECTED REVISION` y `CONTEXT REFS` son referencias explícitas. Actuador no descubre automáticamente otra tarea ni completa referencias faltantes por inferencia.
+
+`STOP CONDITIONS` contiene condiciones observables aplicables a la actuación. Si una condición de parada se cumple, si el contexto factual es inconsistente o si una revisión obligatoria no coincide con la esperada, la actuación se detiene antes de cualquier efecto externo.
+
+El prompt que eventualmente transporte este handoff no reemplaza el Issue, Workflow ni las referencias persistentes. Debe transportar sólo el handoff acotado y el contexto mínimo permitido.
+
+## 33.5 Relación con roles y fases posteriores
+
+Este contrato no modifica la autoridad del Supervisor, Implementador, Humano, `LOCAL_AGENT_OPERATOR` ni `AI_STUDIO_OPERATOR`. Tampoco concede a Actuador capacidad de decidir ingeniería, aprobar, priorizar, cambiar scope, levantar esperas humanas o escribir en GitHub.
+
+La validación ejecutable de `ACTUATION_REQUEST`, la construcción de prompts y la entrega Playwright pertenecen a Work Items posteriores. Esta sección define únicamente el contrato normativo que esas fases deberán consumir sin reinterpretar su autoridad.
+
+
 # Resultado
 
 Este workflow elimina completamente:
