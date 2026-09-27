@@ -16,3 +16,4 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - run: npm run github:read -- --repository cmiloarevalo-hash/Actuador --work-item 7
