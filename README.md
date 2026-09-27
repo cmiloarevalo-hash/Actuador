@@ -113,7 +113,7 @@ La prueba web autenticada real se ejecuta únicamente de forma local:
 
 1. preparar el perfil dedicado con login manual;
 2. crear `config/actuator.config.local.json` con el destino real, prompt de prueba y localizadores inequívocos;
-3. cerrar cualquier navegador que mantenga bloqueado ese perfil;
+3. cerrar calquier navegador que mantenga bloqueado ese perfil;
 4. ejecutar `scripts\START.bat`;
 5. verificar que aparece un solo mensaje correspondiente al prompt exacto;
 6. comprobar el resultado en `.actuador/logs/actuation-YYYY-MM-DD.jsonl`;
@@ -122,6 +122,42 @@ La prueba web autenticada real se ejecuta únicamente de forma local:
 
 La evidencia que se publique no debe incluir credenciales, cookies, contenido sensible de la conversación ni el perfil del navegador.
 
+## M2 — GitHub Read-Only Context Adapter
+
+M2 añade lectura factual y acotada de un Issue y, opcionalmente, un PR explícitamente indicados. Usa exclusivamente GitHub REST mediante `fetch` nativo de Node.js 22, sin autenticación, SDK GitHub, métodos de escritura, caché persistente, Playwright ni entrega de prompts.
+
+Las solicitudes envían explícitamente:
+
+```text
+Accept: application/vnd.github+json
+X-GitHub-Api-Version: 2026-03-10
+```
+
+La API programática `readGithubContext()` devuelve uno de:
+
+```text
+CONTEXT_READY
+CONTEXT_BLOCKED
+CONTEXT_FETCH_FAILED
+```
+
+Los cuerpos y comentarios remotos se conservan como datos no confiables. M2 no produce campos de autorización, actor, aprobación, prioridad, merge, rework o espera humana por inferencia.
+
+Después de compilar, la prueba read-only puede ejecutarse con referencias explícitas:
+
+```text
+npm run build
+npm run github:read -- --repository cmiloarevalo-hash/Actuador --work-item 7
+```
+
+Para incluir un PR explícito:
+
+```text
+npm run github:read -- --repository owner/name --work-item 7 --pr 9
+```
+
+El CLI imprime únicamente un resumen técnico y conteos; no imprime por defecto cuerpos completos de Issue, PR o comentarios. El CI ejecuta además una lectura real read-only de Issue #7 sin credenciales.
+
 ## Documentación de ingeniería
 
-La documentación canónica permanece en `docs/engineering/**`. M1 implementa solamente la primera etapa definida allí y no modifica esa documentación.
+La documentación canónica permanece en `docs/engineering/**`. M1 y M2 no modifican esa documentación.
