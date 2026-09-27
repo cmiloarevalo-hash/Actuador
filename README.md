@@ -2,94 +2,126 @@
 
 ## Propósito
 
-Actuador es un componente de apoyo al Workflow vigente del proyecto.
+Actuador es un componente de apoyo al Workflow vigente del proyecto. Workflow conserva la autoridad sobre responsabilidades, estados, alcance, revisión, decisiones, intervención humana e integración. Actuador no sustituye al Workflow, al Supervisor, al Implementador ni al Humano.
 
-Su función es mantener continuidad operacional entre GitHub y los dos actores web del Workflow:
+## M1 — Playwright Prompt Delivery Test
 
-- Supervisor Web.
-- Agente Implementador Web.
+M1 demuestra únicamente la entrega local de un prompt a una interfaz web previamente autenticada. No integra GitHub en tiempo de ejecución, API de modelo, Workflow Adapter, coordinación entre actores, polling, daemon ni base de datos.
 
-Actuador no sustituye el Workflow, no redefine sus reglas y no adquiere autoridad de ingeniería.
+El flujo implementado es:
 
-## Principio de operación
+```text
+START
+↓
+abrir Chrome/Edge con perfil dedicado
+↓
+verificar marcador de sesión
+↓
+verificar URL y marcador del destino
+↓
+localizar inequívocamente el input
+↓
+insertar el prompt exacto
+↓
+leer y comparar el prompt
+↓
+verificar que el control Send está disponible
+↓
+click Send exactamente una vez
+↓
+confirmar que el prompt dejó el input
+↓
+registrar resultado
+↓
+cierre controlado
+```
 
-Workflow conserva la autoridad sobre:
+La única primitiva de envío es `click` sobre el control Send configurado. No se usa Enter. Si se alcanza el límite de envío y el resultado posterior queda incierto, la ejecución registra `UNCERTAIN_AFTER_SEND` y termina sin reintentar.
 
-- responsabilidades;
-- estados de trabajo;
-- alcance;
-- revisión;
-- decisiones;
-- intervención humana;
-- integración del trabajo.
+## Requisitos
 
-Actuador se limita a consumir los recursos que Workflow expone y a ejecutar las capacidades que tenga permitidas.
+- Node.js 22 o posterior.
+- Google Chrome o Microsoft Edge instalado localmente.
+- Sesión del destino iniciada manualmente en un perfil dedicado a Actuador.
 
-Su comunicación con los actores web se realiza mediante **prompts**.
+Instalación y verificación:
 
-## Responsabilidades principales
+```text
+npm ci
+npm run build
+npm test
+```
 
-Actuador puede:
+GitHub Actions ejecuta esos pasos sin abrir navegador ni utilizar una sesión web local.
 
-- leer contexto permitido desde GitHub y la documentación del proyecto;
-- mantener una caché local de contexto de Workflow para conservar sus límites y responsabilidades;
-- preparar prompts a partir de una actuación permitida;
-- entregar prompts al Supervisor o al Implementador mediante Playwright;
-- registrar el resultado técnico de la entrega;
-- esperar nueva evidencia persistente;
-- advertir sobre problemas o inconsistencias sin resolverlos por sí mismo;
-- detenerse cuando Workflow requiera una decisión humana o cuando no exista autorización suficiente.
+## Configuración local
 
-Actuador no puede:
+`config/actuator.config.json` es una configuración inerte de ejemplo. Para una prueba real, copiarla como:
 
-- modificar código;
-- hacer commit, push, branch o merge;
-- modificar alcance o criterios;
-- aprobar cambios;
-- decidir prioridades;
-- corregir directamente al Implementador;
-- sustituir al Supervisor;
-- sustituir al Humano;
-- redefinir Workflow.
+```text
+config/actuator.config.local.json
+```
 
-## Fuente de verdad
+Ese archivo está ignorado por Git y puede contener la URL, selectores y prompt específicos de la prueba. No debe contener credenciales ni secretos.
 
-GitHub y los recursos definidos por Workflow constituyen la referencia persistente del trabajo.
+Campos relevantes:
 
-La caché local de Workflow es solo una ayuda operacional.
+- `destinationName`: etiqueta no sensible usada en logs.
+- `targetUrl`: URL que Playwright abre.
+- `expectedUrlPrefix`: prefijo que debe cumplir la URL antes de actuar.
+- `profileDir`: perfil persistente y dedicado; por defecto se ubica en `.actuador/playwright-profile` y queda ignorado.
+- `browserChannel`: `chrome` o `msedge`.
+- `prompt`: texto exacto que se insertará una única vez.
+- `selectors.sessionMarker`: elemento visible solo cuando la sesión requerida está disponible.
+- `selectors.destinationMarker`: elemento que identifica inequívocamente el destino.
+- `selectors.promptInput`: campo de entrada.
+- `selectors.sendButton`: único control usado para el envío.
 
-Si la caché es insuficiente, contradictoria o no puede considerarse vigente, Actuador debe volver a consultar la fuente correspondiente o detenerse.
+Los localizadores admiten `role`, `label`, `placeholder` y `css`. Deben preferirse `role`, luego `label` o `placeholder`; `css` queda como contrato específico cuando no existe una opción semántica estable.
 
-## Desarrollo inicial
+## Perfil dedicado y login manual
 
-La primera etapa del desarrollo debe demostrar únicamente que Actuador puede:
+El código nunca introduce credenciales. Antes de la prueba de entrega, el Humano debe abrir el navegador usando el mismo directorio configurado en `profileDir`, iniciar sesión manualmente y cerrar el navegador. Después, `scripts\START.bat` reutiliza ese perfil persistente mediante Playwright.
 
-1. iniciarse localmente;
-2. abrir o focalizar una interfaz web configurada;
-3. utilizar una sesión previamente autenticada;
-4. localizar el campo de entrada;
-5. insertar un prompt exacto;
-6. verificar el contenido antes de enviarlo;
-7. ejecutar un único envío;
-8. registrar el resultado técnico;
-9. terminar de forma controlada.
+El perfil y los logs bajo `.actuador/` no se versionan ni se publican como artifacts.
 
-Las capacidades de integración con GitHub, contextualización mediante API y continuidad entre actores se incorporarán después, conforme al Workflow y a la evidencia obtenida durante el desarrollo.
+## Inicio en Windows
+
+Con dependencias instaladas y la sesión preparada:
+
+```text
+scripts\START.bat
+```
+
+Si existe `config\actuator.config.local.json`, `START.bat` lo utiliza. También puede indicarse otra ruta mediante la variable `ACTUATOR_CONFIG`.
+
+## Resultados técnicos
+
+Cada ejecución termina con exactamente uno de estos resultados:
+
+```text
+SUCCESS
+FAILED_BEFORE_SEND
+UNCERTAIN_AFTER_SEND
+```
+
+El log JSONL contiene timestamp, `destinationName`, resultado y código de error cuando corresponde. No registra el prompt, credenciales ni la ruta del perfil.
+
+## Prueba local controlada de M1
+
+La prueba web autenticada real se ejecuta únicamente de forma local:
+
+1. preparar el perfil dedicado con login manual;
+2. crear `config/actuator.config.local.json` con el destino real, prompt de prueba y localizadores inequívocos;
+3. cerrar cualquier navegador que mantenga bloqueado ese perfil;
+4. ejecutar `scripts\START.bat`;
+5. verificar que aparece un solo mensaje correspondiente al prompt exacto;
+6. comprobar el resultado en `.actuador/logs/actuation-YYYY-MM-DD.jsonl`;
+7. para probar `FAILED_BEFORE_SEND`, usar de forma controlada una sesión/destino/localizador inválido y comprobar que no se envía nada;
+8. para una condición incierta posterior al Send, provocar únicamente una falla de confirmación después del click y verificar que no existe segundo envío.
+
+La evidencia que se publique no debe incluir credenciales, cookies, contenido sensible de la conversación ni el perfil del navegador.
 
 ## Documentación de ingeniería
 
-La documentación canónica inicial se encuentra en:
-
-```text
-docs/engineering/
-├── SOFTWARE_REQUIREMENTS_SPECIFICATION.md
-├── SOFTWARE_ARCHITECTURE.md
-├── TECHNICAL_SPECIFICATION.md
-├── VERIFICATION_PLAN.md
-└── adr/
-    └── ADR-0001-WORKFLOW-BOUNDARY.md
-```
-
-Estos documentos describen la aplicación.
-
-Workflow describe cómo se desarrolla, revisa y gobierna el trabajo sobre ella.
+La documentación canónica permanece en `docs/engineering/**`. M1 implementa solamente la primera etapa definida allí y no modifica esa documentación.

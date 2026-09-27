@@ -1,0 +1,22 @@
+{
+  "name": "actuador",
+  "version": "0.1.0",
+  "private": true,
+  "description": "M1 Playwright prompt delivery test",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/tests/actuation-core.test.js dist/tests/config.test.js",
+    "start": "node dist/src/main.js"
+  },
+  "dependencies": {
+    "playwright-core": "1.55.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.3",
+    "typescript": "5.8.3"
+  }
+}
