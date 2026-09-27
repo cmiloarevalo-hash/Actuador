@@ -75,7 +75,7 @@ export interface HandoffTechnicalSuccess {
   result: "HANDOFF_TECHNICAL_SUCCESS";
   delivery: "SEND_ATTEMPTED";
   storeRecordId: string;
-  outcome: ActuationOutcome & { result: "SUCCESS" };
+  outcome: ActuationOutcome;
 }
 
 export interface HandoffUncertain {
@@ -84,7 +84,7 @@ export interface HandoffUncertain {
   action: "STOP";
   escalation: "SUPERVISOR";
   storeRecordId: string;
-  outcome: ActuationOutcome & { result: "UNCERTAIN_AFTER_SEND" };
+  outcome: ActuationOutcome;
 }
 
 export type HandoffPreparationResult = PreparedHandoff | HandoffBlocked;
