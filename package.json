@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test dist/tests/actuation-core.test.js dist/tests/config.test.js",
+    "test": "npm run build && node --test dist/tests/actuation-core.test.js dist/tests/config.test.js dist/tests/github-reader.test.js",
     "start": "node dist/src/main.js"
   },
   "dependencies": {
