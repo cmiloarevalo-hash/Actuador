@@ -239,7 +239,7 @@ test("preserves hostile remote text strictly as data and does not infer authorit
 
   const result = await readGithubContext(
     { repository, workItemNumber: 7 },
-    { fetchImpl: fakeGithub(defaultHandler, calls), now }
+    { fetchImpl: fakeGithub(handler), now }
   );
 
   assert.equal(result.result, "CONTEXT_READY");
