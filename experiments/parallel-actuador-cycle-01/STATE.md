@@ -16,15 +16,18 @@ STOP CONDITION: NONE
 | 02 operational ledger | COMPLETED | outputs/02/** | 9d44a7e7140868d7ada0d60b69ab644686b5532d |
 | 03 escalation/continuity | COMPLETED | outputs/03/** | 1145c749f3d7b105f570faeda311546c478ffddb |
 | 04 chat/session rotation | COMPLETED | outputs/04/** | aaa63b39ecfff83c7b4c5037813db03a5ddec86e |
-| 05 runtime orchestration | COMPLETED | outputs/05/** | this task-05 checkpoint commit |
-| 06 verification/adoption | PENDING | outputs/06/** | pending |
+| 05 runtime orchestration | COMPLETED | outputs/05/** | dfdc521c8babb57ff823ba7c05e4bb454e5295d4 |
+| 06 verification/adoption | COMPLETED | outputs/06/** | this task-06 checkpoint commit; exact SHA published in final #33 handoff |
 
-## Task 05 evidence
+## Task 06 evidence
 
-- Candidate flow composes poll → context → validator → actor-authored envelope → ledger → store/session gates → controlled output-blind delivery.
-- Multiple signal candidates are not ordered by the orchestrator.
-- No model API/model-controlled browser/DB/vector store/distributed infra/automatic GitHub writes.
-- Real Send remains an explicit external gate; experiment execution performs none.
-- Delivery port exposes no chatbot Output surface.
+- Verification matrix covers duplicate, overlap, restart, rate limit, edit/delete/mutation, unsupported actor, Human wait, ambiguous ready set, wrong recipient, rotation, uncertain Send, lost ledger and output-blind boundary.
+- Mailbox identity verified factually: #31 IMPLEMENTER_WEB, #32 SUPERVISOR_WEB; neither creates authority.
+- Adoption assessment separates reusable candidates from areas needing canonical hardening.
+- RECOMMENDATIONS.md separates ACTUADOR_RECOMMENDATIONS from WORKFLOW_RECOMMENDATIONS.
+- Workflow recommendations are observations only; no Workflow file was modified.
+- No real Web Send occurred.
 
-NEXT TASK: 06-verification-and-adoption.md, conditional on successful checkpoint and no STOP.
+EXPERIMENT: COMPLETE
+CANONICAL PRODUCT: UNCHANGED
+NEXT TASK: NONE — READY_FOR_SUPERVISOR_EVALUATION
