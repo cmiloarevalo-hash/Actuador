@@ -259,7 +259,7 @@ test("blocks a workItemNumber that resolves to a pull request", async () => {
   };
   const result = await readGithubContext(
     { repository, workItemNumber: 7 },
-    { fetchImpl: fakeGithub(defaultHandler), now }
+    { fetchImpl: fakeGithub(handler), now }
    );
   assert.equal(result.result, "CONTEXT_BLOCKED");
   if (result.result === "CONTEXT_BLOCKED") assert.equal(result.errorCode, "WORK_ITEM_IS_PULL_REQUEST");
