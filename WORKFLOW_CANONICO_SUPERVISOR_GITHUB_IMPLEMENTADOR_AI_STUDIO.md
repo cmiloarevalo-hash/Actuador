@@ -1,4 +1,4 @@
-# Workflow canónico — Supervisor + GitHub + Agente implementador + AI_STUDIO_OPERATOR
+# Workflow canónico — Supervisor + GitHub + Agente implementador + AI_STUDIO_OPERATOR + LOCAL_AGENT_OPERATOR
 
 > **Estado:** workflow canónico activo del proyecto desde la integración de Issue #47 mediante PR #49 en `main@866d7aaa793cb9d1a2675965f911c6ddb37275e9`.
 >
@@ -33,6 +33,7 @@ Este workflow organiza el trabajo colaborativo entre:
 - **Chat Web GPT**: planificación, arquitectura, definición de tareas y revisión.
 - **Agente implementador**: implementación y escritura técnica mediante Codespaces/terminal u otro canal de implementación expresamente autorizado.
 - **AI_STUDIO_OPERATOR**: Google AI Studio web para operación externa read/test/publish, sin escritura de código ni repositorio.
+- **LOCAL_AGENT_OPERATOR**: verificación y diagnóstico local autorizados, sin escritura de código/producto; protocolo en §32.
 - **GitHub**: memoria persistente, tareas, código, evidencia y coordinación.
 - **Humano**: intención del producto, prioridades, permisos y decisiones excepcionales.
 
@@ -1341,6 +1342,114 @@ Cualquier excepción futura requiere, como mínimo:
 
 Tener scopes técnicos amplios nunca activa implícitamente una excepción. GitHub continúa siendo la fuente persistente de verdad y el Supervisor conserva la decisión dentro de la autoridad vigente.
 
+# 32. LOCAL_AGENT_OPERATOR — verificación y diagnóstico local no-write
+
+**Fuente de la definición:** Work Item #5 de `cmiloarevalo-hash/Actuador`. Esta sección define autoridad operacional, no implementa runtime ni enforcement técnico en Actuador.
+
+## 32.1 Rol y separación de autoridad
+
+`LOCAL_AGENT_OPERATOR` es un operador técnico subordinado. Comparte con `AI_STUDIO_OPERATOR` la naturaleza de observación, prueba, diagnóstico y retorno de evidencia sin escritura del producto. Se distinguen por el entorno: AI Studio y recursos remotos autorizados (§29), frente a repositorio, terminal, navegador y recursos locales autorizados (§32). No se fusionan los roles, no se reinterpretan actuaciones anteriores ni se transfieren permisos entre ellos.
+
+El Supervisor delimita Semantic Scope y Path Scope, autoriza la actuación y clasifica la evidencia como defecto de repositorio, problema de entorno o evidencia insuficiente. Conserva las decisiones `HOLD / REWORK / ESCALATE / SEMANTIC_ACCEPTED` conforme a las reglas existentes. El Implementador conserva la escritura autorizada por branch/commit/PR; ante un hallazgo del operador, sólo aplica la corrección después del REWORK autorizado y dentro de su alcance. El operador no se convierte implícitamente en Implementador aunque la misma herramienta pueda ejercer ambos roles en tareas distintas.
+
+GitHub y Workflow son la fuente persistente de autoridad y evidencia. El Humano conserva intención, permisos y decisiones reservadas; esta sección no amplía la autoridad de ningún rol existente.
+
+## 32.2 Capacidades y prohibiciones
+
+Sólo dentro de una actuación explícitamente autorizada puede:
+
+- leer repositorio, archivos y contexto local; reconstruir Issue, branch, HEAD, PR y decisiones;
+- ejecutar comandos de lectura/diagnóstico, build, tests y aplicaciones o scripts existentes;
+- usar recursos locales no versionados necesarios para la prueba y el navegador/perfil previamente preparado por el Humano;
+- inspeccionar DOM, selectores, sesión y destino; ejecutar pruebas locales autorizadas;
+- capturar y publicar evidencia técnica mediante el mecanismo limitado de §32.5;
+- cruzar un efecto externo sólo con autorización explícita suficiente para ese efecto;
+- diagnosticar, detenerse y devolver evidencia al Supervisor ante un posible defecto.
+
+No puede, por razón de este rol:
+
+- modificar código, producto o archivos versionados; aplicar fixes;
+- crear/modificar commits o branches, hacer push o merge;
+- abrir PRs ni modificar su contenido, metadatos o revisión; la única publicación permitida en un PR existente es el comentario de evidencia autorizado en §32.5;
+- cambiar dependencias, schemas, prompts normativos o Workflow;
+- cambiar secretos o credenciales;
+- redefinir alcance, priorizar trabajo, levantar un HOLD o autoautorizar una actuación;
+- aprobar semánticamente, emitir `SEMANTIC_ACCEPTED` o `MERGE_ELIGIBLE`, ni asumir autoridad del Implementador.
+
+El uso de recursos no versionados no es una excepción para corregir el producto: sólo admite preparación local expresamente delimitada, salidas de build/tests, logs y configuración de prueba autorizada, sin alterar dependencias declaradas ni archivos versionados. Si la prueba exige un cambio prohibido, STOP y evidencia al Supervisor.
+
+```text
+TECHNICAL PERMISSION != WORKFLOW AUTHORITY
+no autorización demostrable -> no efecto externo
+```
+
+Acceso a terminal, permisos de escritura, una sesión autenticada o credenciales disponibles no autorizan acciones. Una restricción documental no demuestra enforcement técnico. Las prohibiciones de AI Studio en §31 y su ausencia de excepción de escritura permanecen intactas.
+
+## 32.3 Autorización, contexto y frontera humana
+
+Antes de ejecutar, reconstruye desde GitHub el Issue, branch/HEAD/PR y la decisión vigente aplicable a ese SHA; lee Workflow y las fuentes pertinentes. No usa el recuerdo de un chat como autoridad. La solicitud del Supervisor debe quedar asociada al Work Item y contener como mínimo:
+
+```text
+LOCAL_AGENT_REQUEST
+WORK ITEM: #<issue>
+AUTHORIZATION: <referencia persistente del Supervisor y, cuando corresponda, del Humano>
+EXPECTED SHA: <sha>
+TASK: <una actuación concreta>
+SEMANTIC SCOPE: <comportamiento/prueba autorizados>
+PATH SCOPE: <rutas de lectura y recursos locales no versionados permitidos>
+LOCAL TARGET: <aplicación/destino y perfil preparado, sin secretos>
+EXTERNAL EFFECT: NONE | <efecto, destino, límite de intentos y autorización explícita>
+PRECONDITIONS / STOP CONDITIONS: <condiciones observables>
+EVIDENCE: <comprobaciones y destino autorizado de publicación>
+```
+
+Confirma checkout, HEAD exacto y estado del worktree antes de actuar. Un SHA distinto, cambios previos no cubiertos, autorización ausente/ambigua o precondición incumplida implica STOP y reporte `BLOCKED`. El Path Scope no concede escritura del producto. La autorización de una prueba no autoriza por inferencia Send, publicación, despliegue u otro efecto externo.
+
+Se requiere intervención humana para autenticación manual, credenciales, desbloqueo de permisos y preparación de perfiles locales; el operador no introduce ni cambia credenciales. Para un efecto irreversible o materialmente observable sin autorización previa suficiente, se detiene y solicita intervención por el Supervisor. Las decisiones de producto o ingeniería se devuelven al Supervisor; éste decide dentro de su autoridad y escala al Humano las decisiones reservadas, cambios de alcance o excepciones. El operador no resuelve esas decisiones.
+
+## 32.4 Ejecución y hallazgos
+
+```text
+AUTHORIZED_TEST
+→ LOCAL_AGENT_OPERATOR ejecuta dentro del alcance
+→ EVIDENCE (PASS / FAIL / BLOCKED)
+→ clasificación del Supervisor
+→ decisión vigente: HOLD / REWORK / ESCALATE / SEMANTIC_ACCEPTED, según corresponda
+```
+
+`AUTHORIZED_TEST` describe una precondición, no un nuevo estado formal. `PASS` es evidencia técnica, no aprobación. Antes de un efecto externo, comprueba autorización demostrable, destino, precondiciones y límites de intentos. Si no puede demostrar autorización suficiente, no produce el efecto. La incertidumbre posterior obliga a detenerse y reportar; no autoriza repetir el efecto ni ampliar la actuación. Realiza el cierre/limpieza local autorizado y registra cualquier fallo sin improvisar reparaciones.
+
+```text
+Posible defecto → STOP → evidencia → Supervisor
+→ REWORK, si corresponde → Implementador
+```
+
+No aplica un fix para terminar la prueba. La clasificación del operador es provisional; el Supervisor decide si existe defecto de repositorio, problema de entorno o evidencia insuficiente y si se requiere intervención humana. Un bloqueo no se levanta por iniciativa del operador.
+
+## 32.5 Evidencia y handoff
+
+Retorna evidencia mínima verificable, sin secretos, cookies, credenciales ni contenido sensible. Cuando el Supervisor autorice explícitamente su publicación, puede añadir únicamente un comentario de evidencia al Issue o PR existente indicado, asociado al Work Item y SHA; no abre PRs, edita archivos ni altera decisiones, estados, labels o revisiones. Si no existe ese permiso, devuelve el reporte al Supervisor para su persistencia; no se autoautoriza a publicarlo.
+
+```text
+LOCAL_AGENT_REPORT
+WORK ITEM: #<issue>
+AUTHORIZATION: <referencia>
+EXPECTED SHA: <sha>
+OBSERVED SHA: <sha>
+WORKTREE: <estado antes/después>
+TASK / LOCAL TARGET: <actuación y destino, sin secretos>
+RESULT: PASS | FAIL | BLOCKED
+CLASSIFICATION: REPOSITORY | LOCAL_ENVIRONMENT | EXTERNAL_SERVICE | UNKNOWN (provisional)
+EVIDENCE: <comandos/acciones, resultados y límites de lo observado>
+EXTERNAL EFFECT: <autorización, intentos observados, resultado o incertidumbre; NONE si no hubo>
+CONTROLLED CLOSE / CLEANUP: <resultado>
+VERSIONED FILES MODIFIED: NO | <anomalía que obliga a STOP>
+LOCAL RESOURCES: <cambios locales autorizados, sin datos sensibles>
+ERROR / BLOCKER: none | <detalle>
+```
+
+El control vuelve al Supervisor. La evidencia se hace persistente mediante el Issue/PR autorizado; no sustituye su revisión por SHA ni concede aprobación, merge o autoridad futura.
+
 # Resultado
 
 Este workflow elimina completamente:
@@ -1378,7 +1487,7 @@ Chat Web GPT
 SEMANTIC_ACCEPTED / REWORK / HOLD / ESCALATE
 ```
 
-Es menos robusto mecánicamente que el workflow completo porque **scope, selección de contexto y verificación ya no están reforzados por software determinista**. Pero para probar colaboración **Chat Web GPT + Agente implementador + AI_STUDIO_OPERATOR + GitHub**, mantiene las partes más importantes sin introducir infraestructura adicional.
+Es menos robusto mecánicamente que el workflow completo porque **scope, selección de contexto y verificación ya no están reforzados por software determinista**. Pero para probar colaboración **Chat Web GPT + Agente implementador + AI_STUDIO_OPERATOR + LOCAL_AGENT_OPERATOR + GitHub**, mantiene las partes más importantes sin introducir infraestructura adicional.
 
 
 ---
