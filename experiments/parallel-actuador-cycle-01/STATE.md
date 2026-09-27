@@ -14,17 +14,19 @@ STOP CONDITION: NONE
 |---|---|---|---|
 | 01 GitHub signal poller | COMPLETED | outputs/01/** | 4a1042f2c9b60698efdcf92698d170927e1547b9 |
 | 02 operational ledger | COMPLETED | outputs/02/** | 9d44a7e7140868d7ada0d60b69ab644686b5532d |
-| 03 escalation/continuity | COMPLETED | outputs/03/** | this task-03 checkpoint commit |
-| 04 chat/session rotation | PENDING | outputs/04/** | pending |
+| 03 escalation/continuity | COMPLETED | outputs/03/** | 1145c749f3d7b105f570faeda311546c478ffddb |
+| 04 chat/session rotation | COMPLETED | outputs/04/** | this task-04 checkpoint commit |
 | 05 runtime orchestration | PENDING | outputs/05/** | pending |
 | 06 verification/adoption | PENDING | outputs/06/** | pending |
 
-## Task 03 evidence
+## Task 04 evidence
 
-- Unsupported actors STOP/ESCALATE; no substitution.
-- HUMAN_REQUIRED unsatisfied => WAIT.
-- Exactly one ready candidate may continue only if any competing blocked requests have explicit persistent independence evidence.
-- Multiple ready candidates => STOP/ESCALATE; no priority choice.
-- FIFO, age, mailbox, poll order and Issue number are excluded as ordering mechanisms.
+- CHAT_SESSION contains only the required operational identity/counter fields.
+- Exactly one ACTIVE session per role is required.
+- Rotation signal is not treated as self-authorizing; validated persistent authority is an upstream precondition.
+- Age/delivery/input-size metrics are advisory only.
+- Bootstrap uses GitHub/Workflow, never transcript.
+- Rotation preserves request-scoped SEND attempt evidence and blocks replay.
+- Minimal Playwright/DOM only; CDP/private WebSocket/Output reading rejected.
 
-NEXT TASK: 04-chat-session-rotation.md, conditional on successful checkpoint and no STOP.
+NEXT TASK: 05-runtime-orchestration.md, conditional on successful checkpoint and no STOP.
