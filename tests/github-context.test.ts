@@ -227,3 +227,37 @@ test("hostile text remains data and operational evidence omits bodies/comments",
     assert.equal(evidence.contextRefCount, 1);
   }
 });
+
+
+const realReadEnabled =
+  process.env.GITHUB_ACTIONS === "true" &&
+  process.env.GITHUB_EVENT_NAME === "push" &&
+  process.env.GITHUB_REF_NAME === "work-item-m2-3-integrated-verification";
+
+test(
+  "authorized real read-only proof returns CONTEXT_READY for Issue #10 and PR #14",
+  { skip: !realReadEnabled },
+  async () => {
+    const input = {
+      repository: "cmiloarevalo-hash/Actuador",
+      workItemNumber: 10,
+      prNumber: 14
+    };
+
+    const result = await readIntegratedContext(input);
+
+    assert.equal(result.result, "CONTEXT_READY");
+    if (result.result !== "CONTEXT_READY") return;
+
+    const evidence = summarizeIntegratedContext(input, result);
+    assert.equal(evidence.result, "CONTEXT_READY");
+    if (evidence.result !== "CONTEXT_READY") return;
+
+    assert.equal(evidence.repository, "cmiloarevalo-hash/Actuador");
+    assert.equal(evidence.issue, 10);
+    assert.equal(evidence.pr, 14);
+    assert.equal(evidence.revisionRef, process.env.GITHUB_SHA);
+    assert.equal(result.context.workItemRef.number, 10);
+    assert.equal(result.context.prRef?.number, 14);
+  }
+);
