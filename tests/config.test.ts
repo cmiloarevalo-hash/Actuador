@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import path from "node:path";
 import { validateConfig } from "../src/config.js";
 
 const rawConfig = {
@@ -24,8 +25,8 @@ const rawConfig = {
 test("validates supported locator strategies and resolves local paths", () => {
   const config = validateConfig(rawConfig, "/repo");
 
-  assert.equal(config.profileDir, "/repo/.actuador/profile");
-  assert.equal(config.logDir, "/repo/.actuador/logs");
+  assert.equal(config.profileDir, path.resolve("/repo", ".actuador", "profile"));
+  assert.equal(config.logDir, path.resolve("/repo", ".actuador", "logs"));
   assert.equal(config.prompt, "exact prompt");
 });
 
