@@ -14,6 +14,10 @@ export interface ActorAuthoredHandoffPayload {
   text: string;
 }
 
+export interface SelectedPayloadSourceEvidence {
+  comment: GitHubComment;
+}
+
 export interface PromptEnvelope {
   recipient: ActuationTargetActor;
   handoffKind: ActuationHandoffKind;
@@ -66,8 +70,15 @@ function blocked(
 
 function findPersistedComment(
   sourceRef: string,
-  context: WorkflowContext
+  context: WorkflowContext,
+  sourceEvidence?: SelectedPayloadSourceEvidence
 ): GitHubComment | null {
+  if (sourceEvidence !== undefined) {
+    return sourceEvidence.comment.htmlUrl === sourceRef
+      ? sourceEvidence.comment
+      : null;
+  }
+
   const comments = [
     ...context.workItem.comments,
     ...(context.pr?.comments ?? [])
@@ -79,7 +90,8 @@ function findPersistedComment(
 function validatePayload(
   payload: ActorAuthoredHandoffPayload,
   expectedAuthor: ActuationTargetActor,
-  context: WorkflowContext
+  context: WorkflowContext,
+  sourceEvidence?: SelectedPayloadSourceEvidence
 ): PromptBlocked | null {
   if (
     typeof payload !== "object" ||
@@ -105,21 +117,27 @@ function validatePayload(
     );
   }
 
-  const contextReference = context.contextRefs.find(
-    (reference) => reference.htmlUrl === payload.sourceRef
-  );
-  if (contextReference === undefined) {
-    return blocked(
-      "PAYLOAD_SOURCE_NOT_FOUND",
-      "Payload sourceRef must exactly match one factual comment reference in WorkflowContext."
+  if (sourceEvidence === undefined) {
+    const contextReference = context.contextRefs.find(
+      (reference) => reference.htmlUrl === payload.sourceRef
     );
+    if (contextReference === undefined) {
+      return blocked(
+        "PAYLOAD_SOURCE_NOT_FOUND",
+        "Payload sourceRef must exactly match one factual comment reference in WorkflowContext or one explicitly selected source evidence record."
+      );
+    }
   }
 
-  const persisted = findPersistedComment(payload.sourceRef, context);
+  const persisted = findPersistedComment(
+    payload.sourceRef,
+    context,
+    sourceEvidence
+  );
   if (persisted === null || persisted.body === null) {
     return blocked(
       "PAYLOAD_SOURCE_NOT_FOUND",
-      "Payload sourceRef must resolve to exactly one persisted comment body in WorkflowContext."
+      "Payload sourceRef must resolve to exactly one persisted comment body in WorkflowContext or the explicitly selected source evidence record."
     );
   }
 
@@ -136,7 +154,8 @@ function validatePayload(
 export function buildRoleScopedPromptEnvelope(
   validation: ActuationRequestValidationResult,
   context: WorkflowContext,
-  payload: ActorAuthoredHandoffPayload
+  payload: ActorAuthoredHandoffPayload,
+  sourceEvidence?: SelectedPayloadSourceEvidence
 ): PromptBuildResult {
   if (validation.result !== "REQUEST_READY") {
     return blocked(
@@ -164,7 +183,12 @@ export function buildRoleScopedPromptEnvelope(
       );
     }
 
-    const payloadBlock = validatePayload(payload, "SUPERVISOR_WEB", context);
+    const payloadBlock = validatePayload(
+      payload,
+      "SUPERVISOR_WEB",
+      context,
+      sourceEvidence
+    );
     if (payloadBlock !== null) return payloadBlock;
 
     return {
@@ -200,7 +224,12 @@ export function buildRoleScopedPromptEnvelope(
     );
   }
 
-  const payloadBlock = validatePayload(payload, "IMPLEMENTER_WEB", context);
+  const payloadBlock = validatePayload(
+    payload,
+    "IMPLEMENTER_WEB",
+    context,
+    sourceEvidence
+  );
   if (payloadBlock !== null) return payloadBlock;
 
   if (

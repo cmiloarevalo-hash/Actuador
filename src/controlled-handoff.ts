@@ -11,6 +11,7 @@ import {
   type ActorAuthoredHandoffPayload,
   type PromptEnvelope
 } from "./prompt-builder.js";
+import type { GitHubComment } from "./github-reader.js";
 import {
   payloadSourceMatchesRoute,
   type ControlledHandoffRoutingConfig,
@@ -45,10 +46,16 @@ export interface RealHandoffProofAuthorization {
   noRetryAfterUncertainty: true;
 }
 
+export interface MailboxPayloadEvidence {
+  mailboxRef: string;
+  comment: GitHubComment;
+}
+
 export interface ControlledHandoffInput {
   rawRequest: unknown;
   context: WorkflowContext;
   payload: ActorAuthoredHandoffPayload;
+  mailboxPayloadEvidence?: MailboxPayloadEvidence;
   routing: ControlledHandoffRoutingConfig;
   cwd?: string;
 }
@@ -130,8 +137,12 @@ function recipientPrefix(recipient: ActuationTargetActor): string {
 
 function sourceIsFactual(
   sourceRef: string,
-  context: WorkflowContext
+  context: WorkflowContext,
+  mailboxEvidence?: MailboxPayloadEvidence
 ): boolean {
+  if (mailboxEvidence !== undefined) {
+    return mailboxEvidence.comment.htmlUrl === sourceRef;
+  }
   return context.contextRefs.some((reference) => reference.htmlUrl === sourceRef);
 }
 
@@ -216,7 +227,10 @@ export async function prepareControlledHandoff(
   const promptResult = buildRoleScopedPromptEnvelope(
     validation,
     input.context,
-    input.payload
+    input.payload,
+    input.mailboxPayloadEvidence === undefined
+      ? undefined
+      : { comment: input.mailboxPayloadEvidence.comment }
   );
   if (promptResult.result !== "PROMPT_READY") {
     return blocked(
@@ -272,7 +286,13 @@ export async function prepareControlledHandoff(
   }
 
   if (
-    !sourceIsFactual(envelope.payloadSourceRef, input.context) ||
+    !sourceIsFactual(
+      envelope.payloadSourceRef,
+      input.context,
+      input.mailboxPayloadEvidence
+    ) ||
+    (input.mailboxPayloadEvidence !== undefined &&
+      input.mailboxPayloadEvidence.mailboxRef !== route.mailboxRef) ||
     !payloadSourceMatchesRoute(envelope.payloadSourceRef, route)
   ) {
     return blocked(

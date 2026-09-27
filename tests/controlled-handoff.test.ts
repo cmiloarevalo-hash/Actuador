@@ -28,10 +28,14 @@ const AUTH_REF =
   "https://github.com/owner/repo/issues/23#issuecomment-100";
 const HUMAN_REF =
   "https://github.com/owner/repo/issues/23#issuecomment-200";
+const IMPLEMENTER_RECIPIENT_MAILBOX_REF =
+  "https://github.com/owner/repo/issues/31";
+const SUPERVISOR_RECIPIENT_MAILBOX_REF =
+  "https://github.com/owner/repo/issues/32";
 const SUPERVISOR_PAYLOAD_REF =
-  "https://github.com/owner/repo/issues/23#issuecomment-300";
+  `${IMPLEMENTER_RECIPIENT_MAILBOX_REF}#issuecomment-300`;
 const IMPLEMENTER_PAYLOAD_REF =
-  "https://github.com/owner/repo/issues/23#issuecomment-400";
+  `${SUPERVISOR_RECIPIENT_MAILBOX_REF}#issuecomment-400`;
 
 function comment(id: number, body: string): GitHubComment {
   return {
@@ -44,12 +48,21 @@ function comment(id: number, body: string): GitHubComment {
   };
 }
 
+function mailboxComment(
+  mailboxNumber: number,
+  id: number,
+  body: string
+): GitHubComment {
+  return {
+    ...comment(id, body),
+    htmlUrl: `https://github.com/owner/repo/issues/${mailboxNumber}#issuecomment-${id}`
+  };
+}
+
 function context(withPr = false): WorkflowContext {
   const issueComments = [
     comment(100, "authority"),
-    comment(200, "human authority"),
-    comment(300, "Supervisor-authored implementation payload."),
-    comment(400, "Implementer-authored review payload.")
+    comment(200, "human authority")
   ];
 
   return {
@@ -164,12 +177,12 @@ function routing(): ControlledHandoffRoutingConfig {
       SUPERVISOR_WEB: {
         authorActor: "SUPERVISOR_WEB",
         recipientActor: "IMPLEMENTER_WEB",
-        mailboxRef: "https://github.com/owner/repo/issues/23"
+        mailboxRef: IMPLEMENTER_RECIPIENT_MAILBOX_REF
       },
       IMPLEMENTER_WEB: {
         authorActor: "IMPLEMENTER_WEB",
         recipientActor: "SUPERVISOR_WEB",
-        mailboxRef: "https://github.com/owner/repo/issues/23"
+        mailboxRef: SUPERVISOR_RECIPIENT_MAILBOX_REF
       }
     },
     destinations: {
@@ -214,6 +227,23 @@ function input(
           sourceRef: SUPERVISOR_PAYLOAD_REF,
           authorActor: "SUPERVISOR_WEB",
           text: "Supervisor-authored implementation payload."
+        },
+    mailboxPayloadEvidence: supervisorReview
+      ? {
+          mailboxRef: SUPERVISOR_RECIPIENT_MAILBOX_REF,
+          comment: mailboxComment(
+            32,
+            400,
+            "Implementer-authored review payload."
+          )
+        }
+      : {
+          mailboxRef: IMPLEMENTER_RECIPIENT_MAILBOX_REF,
+          comment: mailboxComment(
+            31,
+            300,
+            "Supervisor-authored implementation payload."
+          )
         },
     routing: options.routingConfig ?? routing(),
     cwd
@@ -330,6 +360,107 @@ test("SUPERVISOR_WEB handoff preserves payload and includes alignment suffix in 
     prepared.storeRecord.prompt.split("\n")[0],
     "DESTINATARIO: SUPERVISOR_WEB"
   );
+});
+
+
+test("explicit selected #32-style mailbox source with exact body can prepare", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "actuador-m34-"));
+  const result = await prepareControlledHandoff(
+    input(cwd, { supervisorReview: true })
+  );
+
+  assert.equal(result.result, "HANDOFF_PREPARED");
+  if (result.result !== "HANDOFF_PREPARED") return;
+  assert.equal(result.envelope.payloadSourceRef, IMPLEMENTER_PAYLOAD_REF);
+  assert.equal(
+    result.envelope.prompt.includes("Implementer-authored review payload."),
+    true
+  );
+});
+
+test("same payload from wrong mailbox route blocks", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "actuador-m34-"));
+  const base = input(cwd, { supervisorReview: true });
+  const wrongSource =
+    `${IMPLEMENTER_RECIPIENT_MAILBOX_REF}#issuecomment-400`;
+
+  const result = await prepareControlledHandoff({
+    ...base,
+    payload: {
+      ...base.payload,
+      sourceRef: wrongSource
+    },
+    mailboxPayloadEvidence: {
+      mailboxRef: IMPLEMENTER_RECIPIENT_MAILBOX_REF,
+      comment: mailboxComment(
+        31,
+        400,
+        "Implementer-authored review payload."
+      )
+    }
+  });
+
+  assert.equal(result.result, "HANDOFF_BLOCKED");
+  if (result.result === "HANDOFF_BLOCKED") {
+    assert.equal(result.errorCode, "PAYLOAD_PROVENANCE_MISMATCH");
+  }
+});
+
+test("absent selected mailbox source evidence blocks", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "actuador-m34-"));
+  const base = input(cwd, { supervisorReview: true });
+  const { mailboxPayloadEvidence: _mailboxPayloadEvidence, ...withoutEvidence } =
+    base;
+
+  const result = await prepareControlledHandoff(withoutEvidence);
+
+  assert.equal(result.result, "HANDOFF_BLOCKED");
+  if (result.result === "HANDOFF_BLOCKED") {
+    assert.equal(result.errorCode, "PROMPT_PAYLOAD_SOURCE_NOT_FOUND");
+  }
+});
+
+test("selected mailbox persisted body mismatch blocks", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "actuador-m34-"));
+  const base = input(cwd, { supervisorReview: true });
+  assert.notEqual(base.mailboxPayloadEvidence, undefined);
+  if (base.mailboxPayloadEvidence === undefined) {
+    throw new Error("expected mailbox payload evidence");
+  }
+
+  const result = await prepareControlledHandoff({
+    ...base,
+    mailboxPayloadEvidence: {
+      ...base.mailboxPayloadEvidence,
+      comment: {
+        ...base.mailboxPayloadEvidence.comment,
+        body: "edited persisted payload body"
+      }
+    }
+  });
+
+  assert.equal(result.result, "HANDOFF_BLOCKED");
+  if (result.result === "HANDOFF_BLOCKED") {
+    assert.equal(result.errorCode, "PROMPT_PAYLOAD_SOURCE_MISMATCH");
+  }
+});
+
+test("mailbox payload evidence cannot satisfy Workflow authorization", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "actuador-m34-"));
+  const base = input(cwd, { supervisorReview: true });
+
+  const result = await prepareControlledHandoff({
+    ...base,
+    rawRequest: {
+      ...(base.rawRequest as ActuationRequest),
+      authorization: IMPLEMENTER_PAYLOAD_REF
+    }
+  });
+
+  assert.equal(result.result, "HANDOFF_BLOCKED");
+  if (result.result === "HANDOFF_BLOCKED") {
+    assert.equal(result.errorCode, "REQUEST_AUTHORIZATION_NOT_APPLICABLE");
+  }
 });
 
 test("payload provenance blocks a correct author label from the wrong configured source route", async () => {
