@@ -29,4 +29,6 @@ test("real read-only proof against explicit Actuador Issue and PR", {
   const serialized = JSON.stringify(evidence);
   assert.equal(serialized.includes('"body"'), false);
   assert.equal(serialized.includes('"comments"'), false);
+
+  console.log(`SAFE_EVIDENCE ${serialized}`);
 });
