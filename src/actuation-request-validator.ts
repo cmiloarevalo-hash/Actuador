@@ -12,6 +12,8 @@ export type ActuationExternalEffect =
   | "NONE"
   | "PROMPT_DELIVERY";
 
+export type PersistentAuthorityReference = string;
+
 export interface ActuationWorkItemRef {
   repository: string;
   number: number;
@@ -20,12 +22,12 @@ export interface ActuationWorkItemRef {
 export interface ActuationRequest {
   kind: "ACTUATION_REQUEST";
   workItem: ActuationWorkItemRef;
-  authorization: string;
+  authorization: PersistentAuthorityReference;
   expectedRevision: string | null;
   targetActor: ActuationTargetActor;
   handoffKind: ActuationHandoffKind;
   humanRequired: boolean;
-  humanAuthorization: string | null;
+  humanAuthorization: PersistentAuthorityReference | null;
   externalEffect: ActuationExternalEffect;
   deliveryLimit: 0 | 1;
   contextRefs: string[];
@@ -44,7 +46,9 @@ export interface RequestBlocked {
     | "CONTEXT_MISMATCH"
     | "ACTOR_HANDOFF_MISMATCH"
     | "AUTHORIZATION_REQUIRED"
+    | "AUTHORIZATION_NOT_APPLICABLE"
     | "HUMAN_AUTHORIZATION_REQUIRED"
+    | "HUMAN_AUTHORIZATION_NOT_APPLICABLE"
     | "PR_REQUIRED"
     | "EXPECTED_REVISION_REQUIRED"
     | "REVISION_MISMATCH"
@@ -100,18 +104,50 @@ function hasOnlyKeys(
   return Object.keys(value).every((key) => allowed.has(key));
 }
 
-function explicitReference(value: unknown): string | null {
+function persistentReference(value: unknown): PersistentAuthorityReference | null {
   if (typeof value !== "string") return null;
   if (value.length === 0 || value !== value.trim()) return null;
   if (value === "NONE" || value.includes("\n") || value.includes("\r")) return null;
   if (value.includes("<") || value.includes(">")) return null;
+
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      url.hostname !== "github.com" ||
+      url.username !== "" ||
+      url.password !== "" ||
+      url.port !== ""
+    ) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
   return value;
 }
 
-function nullableExplicitReference(value: unknown): string | null | undefined {
+function nullablePersistentReference(
+  value: unknown
+): PersistentAuthorityReference | null | undefined {
   if (value === null) return null;
-  const reference = explicitReference(value);
+  const reference = persistentReference(value);
   return reference === null ? undefined : reference;
+}
+
+function factualPersistentReferences(context: WorkflowContext): ReadonlySet<string> {
+  const refs = new Set<string>([
+    context.sourceId,
+    context.workItemRef.htmlUrl,
+    ...context.contextRefs.map((reference) => reference.htmlUrl)
+  ]);
+
+  if (context.prRef !== null) {
+    refs.add(context.prRef.htmlUrl);
+  }
+
+  return refs;
 }
 
 function stringArray(value: unknown): string[] | null {
@@ -155,11 +191,11 @@ function parseRequest(value: unknown): ActuationRequest | RequestBlocked {
     );
   }
 
-  const authorization = explicitReference(request.authorization);
+  const authorization = persistentReference(request.authorization);
   if (authorization === null) {
     return blocked(
       "AUTHORIZATION_REQUIRED",
-      "authorization must be one explicit persistent Supervisor authority reference."
+      "authorization must be one demonstrable persistent GitHub authority reference."
     );
   }
 
@@ -202,11 +238,11 @@ function parseRequest(value: unknown): ActuationRequest | RequestBlocked {
     return blocked("INVALID_REQUEST", "humanRequired must be boolean.");
   }
 
-  const humanAuthorization = nullableExplicitReference(request.humanAuthorization);
+  const humanAuthorization = nullablePersistentReference(request.humanAuthorization);
   if (humanAuthorization === undefined) {
     return blocked(
-      "INVALID_REQUEST",
-      "humanAuthorization must be one explicit persistent Human authority reference or null for NONE."
+      "HUMAN_AUTHORIZATION_REQUIRED",
+      "humanAuthorization must be one demonstrable persistent GitHub authority reference or null for NONE."
     );
   }
 
@@ -273,6 +309,24 @@ export function validateActuationRequest(
     return blocked(
       "CONTEXT_MISMATCH",
       "ACTUATION_REQUEST repository and Work Item must match factual WorkflowContext."
+    );
+  }
+
+  const applicableReferences = factualPersistentReferences(context);
+  if (!applicableReferences.has(request.authorization)) {
+    return blocked(
+      "AUTHORIZATION_NOT_APPLICABLE",
+      "authorization must exactly match a persistent factual reference observed in the current WorkflowContext."
+    );
+  }
+
+  if (
+    request.humanAuthorization !== null &&
+    !applicableReferences.has(request.humanAuthorization)
+  ) {
+    return blocked(
+      "HUMAN_AUTHORIZATION_NOT_APPLICABLE",
+      "humanAuthorization must exactly match a persistent factual reference observed in the current WorkflowContext."
     );
   }
 
