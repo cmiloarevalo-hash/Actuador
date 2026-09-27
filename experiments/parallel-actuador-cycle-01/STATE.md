@@ -12,21 +12,20 @@ STOP CONDITION: NONE
 
 | Task | State | Outputs | Checkpoint |
 |---|---|---|---|
-| 01 GitHub signal poller | COMPLETED | outputs/01/** | this task-01 checkpoint commit |
-| 02 operational ledger | PENDING | outputs/02/** | pending |
+| 01 GitHub signal poller | COMPLETED | outputs/01/** | 4a1042f2c9b60698efdcf92698d170927e1547b9 |
+| 02 operational ledger | COMPLETED | outputs/02/** | this task-02 checkpoint commit |
 | 03 escalation/continuity | PENDING | outputs/03/** | pending |
 | 04 chat/session rotation | PENDING | outputs/04/** | pending |
 | 05 runtime orchestration | PENDING | outputs/05/** | pending |
 | 06 verification/adoption | PENDING | outputs/06/** | pending |
 
-## Task 01 evidence
+## Task 02 evidence
 
-- One repository-wide comments GET per idle cycle is the candidate.
-- Default/floor interval: 90 seconds.
-- Local activation filter: mailbox Issues #31 and #32 only.
-- Cursor: `updatedAt` with 60-second overlap; full pagination before cursor advance.
-- Rate-limit headers and Retry-After are fail-closed pacing inputs.
-- Arbitrary repository comments produce no activation.
-- Candidate has no GitHub write operation.
+- Cursor/dedup state is explicitly non-authoritative.
+- Exact repeated observation is deduplicated.
+- Edited/mutated/rebound records BLOCK/ESCALATE.
+- Deleted source blocks at exact-source revalidation.
+- SEND_ATTEMPTED / UNCERTAIN state is never replayable.
+- Missing/corrupt ledger with possible prior Send => STOP_UNKNOWN_PRIOR_SEND.
 
-NEXT TASK: 02-operational-ledger.md, conditional on successful checkpoint and no STOP.
+NEXT TASK: 03-escalation-and-continuity.md, conditional on successful checkpoint and no STOP.
