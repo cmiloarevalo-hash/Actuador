@@ -13,19 +13,18 @@ STOP CONDITION: NONE
 | Task | State | Outputs | Checkpoint |
 |---|---|---|---|
 | 01 GitHub signal poller | COMPLETED | outputs/01/** | 4a1042f2c9b60698efdcf92698d170927e1547b9 |
-| 02 operational ledger | COMPLETED | outputs/02/** | this task-02 checkpoint commit |
-| 03 escalation/continuity | PENDING | outputs/03/** | pending |
+| 02 operational ledger | COMPLETED | outputs/02/** | 9d44a7e7140868d7ada0d60b69ab644686b5532d |
+| 03 escalation/continuity | COMPLETED | outputs/03/** | this task-03 checkpoint commit |
 | 04 chat/session rotation | PENDING | outputs/04/** | pending |
 | 05 runtime orchestration | PENDING | outputs/05/** | pending |
 | 06 verification/adoption | PENDING | outputs/06/** | pending |
 
-## Task 02 evidence
+## Task 03 evidence
 
-- Cursor/dedup state is explicitly non-authoritative.
-- Exact repeated observation is deduplicated.
-- Edited/mutated/rebound records BLOCK/ESCALATE.
-- Deleted source blocks at exact-source revalidation.
-- SEND_ATTEMPTED / UNCERTAIN state is never replayable.
-- Missing/corrupt ledger with possible prior Send => STOP_UNKNOWN_PRIOR_SEND.
+- Unsupported actors STOP/ESCALATE; no substitution.
+- HUMAN_REQUIRED unsatisfied => WAIT.
+- Exactly one ready candidate may continue only if any competing blocked requests have explicit persistent independence evidence.
+- Multiple ready candidates => STOP/ESCALATE; no priority choice.
+- FIFO, age, mailbox, poll order and Issue number are excluded as ordering mechanisms.
 
-NEXT TASK: 03-escalation-and-continuity.md, conditional on successful checkpoint and no STOP.
+NEXT TASK: 04-chat-session-rotation.md, conditional on successful checkpoint and no STOP.
