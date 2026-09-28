@@ -115,19 +115,33 @@ decidir
 
 # 4. Agente implementador
 
-Es el **desarrollador** del workflow canónico. Implementa mediante Codespaces/terminal u otro canal de implementación expresamente autorizado; conserva las responsabilidades de branch, commit y PR definidas en esta sección.
+Es el **desarrollador** del workflow canónico y conserva las responsabilidades de branch, commit y PR definidas en esta sección.
 
-No es `AI_STUDIO_OPERATOR` y Google AI Studio web no ejerce el rol implementador bajo este protocolo.
+Cuando el rol opera como `IMPLEMENTER_WEB`, las herramientas conectadas a GitHub son su workspace de repositorio por defecto. No clona, descarga ni crea por defecto un workspace local del repositorio, ni cambia a Codespaces sólo por conveniencia. Clone, Codespace o workspace local requieren autorización explícita del Work Item o de una decisión posterior del Supervisor.
+
+El orden de ejecución preferido para `IMPLEMENTER_WEB` es:
+
+1. reconstruir el contexto acotado desde Issue / PR / SHA;
+2. leer sólo los archivos necesarios mediante herramientas conectadas a GitHub;
+3. escribir los cambios autorizados directamente sobre la branch autorizada mediante herramientas conectadas a GitHub;
+4. utilizar GitHub CI como evidencia de build/tests cuando la ejecución local no esté requerida explícitamente;
+5. ante saturación del contexto del chat, persistir el checkpoint correspondiente en GitHub y continuar en una nueva sesión Web reconstruida desde GitHub;
+6. cuando una verificación requiera filesystem, navegador o entorno local real, devolver control al Supervisor para una actuación explícita de `LOCAL_AGENT_OPERATOR`;
+7. usar clone, Codespace o workspace local sólo cuando exista autorización explícita para ese canal.
+
+Los límites de contexto del chat, la conveniencia o la ausencia de terminal dentro del chat no crean autoridad para clonar ni para abrir un workspace local.
+
+No es `AI_STUDIO_OPERATOR` y las reglas de clone/fetch de `AI_STUDIO_OPERATOR` permanecen limitadas a ese rol; no se generalizan al Implementador.
 
 Responsabilidades:
 
 - leer el Issue;
 - recuperar únicamente el contexto necesario;
 - revisar la documentación relevante;
-- comprobar el estado del repositorio;
+- comprobar el estado del repositorio mediante el canal autorizado;
 - crear o utilizar la branch indicada;
 - implementar únicamente el alcance autorizado;
-- ejecutar las pruebas correspondientes;
+- ejecutar las pruebas correspondientes por el canal autorizado o verificar la evidencia de CI requerida;
 - revisar su propio diff;
 - commit;
 - push;
@@ -150,7 +164,8 @@ No debe:
 - ampliar el alcance silenciosamente;
 - corregir problemas no relacionados;
 - declarar su propio trabajo aprobado;
-- hacer merge sólo porque los tests pasaron.
+- hacer merge sólo porque los tests pasaron;
+- interpretar una limitación de la sesión Web como autorización para cambiar de canal de ejecución.
 
 ---
 
@@ -753,7 +768,7 @@ El Agente implementador no se autoaprueba ni ejecuta el merge.
 
 # 25. Cambio de sesión del Agente implementador
 
-Si desaparece la sesión del Agente implementador:
+Si desaparece o se satura la sesión del Agente implementador, el estado útil debe quedar persistido en GitHub mediante los artefactos autorizados de la tarea; el transcript no es el mecanismo de continuidad.
 
 La nueva sesión recibe solamente:
 
@@ -779,10 +794,10 @@ documentación relevante
 ↓
 código
 ↓
-tests
+tests / CI
 ```
 
-No necesita transcript anterior.
+No necesita transcript anterior. Para `IMPLEMENTER_WEB`, este cambio de sesión continúa siendo GitHub-connected first: saturación del contexto, conveniencia o ausencia de terminal no autorizan clone, Codespace ni workspace local. Si la continuación requiere una actuación local real, el control vuelve al Supervisor para una `LOCAL_AGENT_REQUEST` explícita.
 
 Debe responder nuevamente las diez preguntas de bootstrap antes de continuar.
 
@@ -1348,7 +1363,7 @@ Tener scopes técnicos amplios nunca activa implícitamente una excepción. GitH
 
 ## 32.1 Rol y separación de autoridad
 
-`LOCAL_AGENT_OPERATOR` es un operador técnico subordinado. Comparte con `AI_STUDIO_OPERATOR` la naturaleza de observación, prueba, diagnóstico y retorno de evidencia sin escritura del producto. Se distinguen por el entorno: AI Studio y recursos remotos autorizados (§29), frente a repositorio, terminal, navegador y recursos locales autorizados (§32). No se fusionan los roles, no se reinterpretan actuaciones anteriores ni se transfieren permisos entre ellos.
+`LOCAL_AGENT_OPERATOR` es un operador técnico subordinado. Comparte con `AI_STUDIO_OPERATOR` la naturaleza de observación, prueba, diagnóstico y retorno de evidencia sin escritura del producto. Se distinguen por el entorno: AI Studio y recursos remotos autorizados (§29), frente a repositorio, terminal, navegador y recursos locales autorizados (§32). Cuando existe autorización explícita, `LOCAL_AGENT_OPERATOR` también puede preparar el entorno Git local exacto necesario para esa actuación; esa preparación modifica sólo metadata/checkout/worktrees locales y no lo convierte en Implementador ni crea autoridad sobre el producto o el repositorio remoto. No se fusionan los roles, no se reinterpretan actuaciones anteriores ni se transfieren permisos entre ellos.
 
 El Supervisor delimita Semantic Scope y Path Scope, autoriza la actuación y clasifica la evidencia como defecto de repositorio, problema de entorno o evidencia insuficiente. Conserva las decisiones `HOLD / REWORK / ESCALATE / SEMANTIC_ACCEPTED` conforme a las reglas existentes. El Implementador conserva la escritura autorizada por branch/commit/PR; ante un hallazgo del operador, sólo aplica la corrección después del REWORK autorizado y dentro de su alcance. El operador no se convierte implícitamente en Implementador aunque la misma herramienta pueda ejercer ambos roles en tareas distintas.
 
@@ -1360,23 +1375,35 @@ Sólo dentro de una actuación explícitamente autorizada puede:
 
 - leer repositorio, archivos y contexto local; reconstruir Issue, branch, HEAD, PR y decisiones;
 - ejecutar comandos de lectura/diagnóstico, build, tests y aplicaciones o scripts existentes;
-- usar recursos locales no versionados necesarios para la prueba y el navegador/perfil previamente preparado por el Humano;
+- ejecutar `git fetch` o refrescar referencias remotas cuando el `LOCAL_AGENT_REQUEST` lo autorice;
+- inspeccionar refs remotas/locales y worktrees;
+- crear y usar una branch local de tracking únicamente para una branch remota ya existente y expresamente nombrada por la autorización;
+- crear, usar y remover un worktree local auxiliar para la branch/SHA y target local exactos autorizados;
+- checkout/switch del worktree local autorizado a la branch/SHA exactos indicados;
+- verificar `origin`, branch, HEAD y estado limpio del worktree;
+- usar recursos locales no versionados necesarios para la prueba y el navegador/perfil previamente preparado o expresamente autorizado;
 - inspeccionar DOM, selectores, sesión y destino; ejecutar pruebas locales autorizadas;
 - capturar y publicar evidencia técnica mediante el mecanismo limitado de §32.5;
 - cruzar un efecto externo sólo con autorización explícita suficiente para ese efecto;
 - diagnosticar, detenerse y devolver evidencia al Supervisor ante un posible defecto.
 
+Estas operaciones de Git local son **preparación del entorno**, no autoridad de implementación. Pueden modificar refs locales, metadata Git y worktrees sólo dentro del target expresamente autorizado; no autorizan contenido versionado nuevo ni efectos remotos.
+
 No puede, por razón de este rol:
 
 - modificar código, producto o archivos versionados; aplicar fixes;
-- crear/modificar commits o branches, hacer push o merge;
+- crear commits;
+- crear branches arbitrarias, mover forzadamente branches o reutilizar la autorización para una branch distinta; la única excepción es la branch local de tracking de una branch remota existente y expresamente autorizada;
+- hacer merge, rebase, cherry-pick, rewrite de historial, reset destructivo o cualquier operación equivalente de reescritura;
+- hacer push, force-push ni cualquier escritura remota;
 - abrir PRs ni modificar su contenido, metadatos o revisión; la única publicación permitida en un PR existente es el comentario de evidencia autorizado en §32.5;
 - cambiar dependencias, schemas, prompts normativos o Workflow;
 - cambiar secretos o credenciales;
 - redefinir alcance, priorizar trabajo, levantar un HOLD o autoautorizar una actuación;
-- aprobar semánticamente, emitir `SEMANTIC_ACCEPTED` o `MERGE_ELIGIBLE`, ni asumir autoridad del Implementador.
+- aprobar semánticamente, emitir `SEMANTIC_ACCEPTED` o `MERGE_ELIGIBLE`, ni asumir autoridad del Implementador;
+- usar preparación local para eludir un checkout sucio, conflictivo o ambiguo. Ante dirty/conflict/ambigüedad material: STOP y reporte, no reset ni reparación.
 
-El uso de recursos no versionados no es una excepción para corregir el producto: sólo admite preparación local expresamente delimitada, salidas de build/tests, logs y configuración de prueba autorizada, sin alterar dependencias declaradas ni archivos versionados. Si la prueba exige un cambio prohibido, STOP y evidencia al Supervisor.
+El uso de recursos no versionados o de metadata Git local no es una excepción para corregir el producto: sólo admite preparación local expresamente delimitada, salidas de build/tests, logs y configuración de prueba autorizada, sin alterar dependencias declaradas ni archivos versionados. Si la prueba exige un cambio prohibido, STOP y evidencia al Supervisor.
 
 ```text
 TECHNICAL PERMISSION != WORKFLOW AUTHORITY
@@ -1387,23 +1414,27 @@ Acceso a terminal, permisos de escritura, una sesión autenticada o credenciales
 
 ## 32.3 Autorización, contexto y frontera humana
 
-Antes de ejecutar, reconstruye desde GitHub el Issue, branch/HEAD/PR y la decisión vigente aplicable a ese SHA; lee Workflow y las fuentes pertinentes. No usa el recuerdo de un chat como autoridad. La solicitud del Supervisor debe quedar asociada al Work Item y contener como mínimo:
+Antes de ejecutar, reconstruye desde GitHub el Issue, branch/HEAD/PR y la decisión vigente aplicable a ese SHA; lee Workflow y las fuentes pertinentes. No usa el recuerdo de un chat como autoridad. Si la actuación requiere preparación Git local, la solicitud debe identificar el repositorio, la branch remota existente/SHA esperados y el target local exacto. La solicitud del Supervisor debe quedar asociada al Work Item y contener como mínimo:
 
 ```text
 LOCAL_AGENT_REQUEST
 WORK ITEM: #<issue>
 AUTHORIZATION: <referencia persistente del Supervisor y, cuando corresponda, del Humano>
+REPOSITORY: <owner/repo>
+REMOTE BRANCH: <branch remota existente | NONE>
 EXPECTED SHA: <sha>
 TASK: <una actuación concreta>
 SEMANTIC SCOPE: <comportamiento/prueba autorizados>
-PATH SCOPE: <rutas de lectura y recursos locales no versionados permitidos>
-LOCAL TARGET: <aplicación/destino y perfil preparado, sin secretos>
+PATH SCOPE: <rutas de lectura, metadata Git local y recursos no versionados permitidos>
+LOCAL TARGET: <checkout/worktree/aplicación/destino exactos, sin secretos>
 EXTERNAL EFFECT: NONE | <efecto, destino, límite de intentos y autorización explícita>
 PRECONDITIONS / STOP CONDITIONS: <condiciones observables>
 EVIDENCE: <comprobaciones y destino autorizado de publicación>
 ```
 
-Confirma checkout, HEAD exacto y estado del worktree antes de actuar. Un SHA distinto, cambios previos no cubiertos, autorización ausente/ambigua o precondición incumplida implica STOP y reporte `BLOCKED`. El Path Scope no concede escritura del producto. La autorización de una prueba no autoriza por inferencia Send, publicación, despliegue u otro efecto externo.
+Un único `LOCAL_AGENT_REQUEST` puede autorizar tanto la preparación exacta del entorno local como la verificación/test acotados que siguen, siempre que ambas actuaciones sean explícitas y mantengan las mismas condiciones de parada.
+
+Primero verifica `origin`, refs relevantes y el estado del target local. Después puede ejecutar únicamente la preparación Git local expresamente autorizada y debe confirmar branch, HEAD exacto y worktree limpio antes de la prueba. Un SHA distinto, branch remota inexistente, dirty/conflict/ambigüedad material, cambios previos no cubiertos, autorización ausente/ambigua o precondición incumplida implica STOP y reporte `BLOCKED`; no se repara mediante reset, rebase, branch movement ni otro bypass. El Path Scope no concede escritura del producto. La autorización de una prueba no autoriza por inferencia Send, publicación, despliegue u otro efecto externo.
 
 Se requiere intervención humana para autenticación manual, credenciales, desbloqueo de permisos y preparación de perfiles locales; el operador no introduce ni cambia credenciales. Para un efecto irreversible o materialmente observable sin autorización previa suficiente, se detiene y solicita intervención por el Supervisor. Las decisiones de producto o ingeniería se devuelven al Supervisor; éste decide dentro de su autoridad y escala al Humano las decisiones reservadas, cambios de alcance o excepciones. El operador no resuelve esas decisiones.
 
@@ -1417,7 +1448,7 @@ AUTHORIZED_TEST
 → decisión vigente: HOLD / REWORK / ESCALATE / SEMANTIC_ACCEPTED, según corresponda
 ```
 
-`AUTHORIZED_TEST` describe una precondición, no un nuevo estado formal. `PASS` es evidencia técnica, no aprobación. Antes de un efecto externo, comprueba autorización demostrable, destino, precondiciones y límites de intentos. Si no puede demostrar autorización suficiente, no produce el efecto. La incertidumbre posterior obliga a detenerse y reportar; no autoriza repetir el efecto ni ampliar la actuación. Realiza el cierre/limpieza local autorizado y registra cualquier fallo sin improvisar reparaciones.
+`AUTHORIZED_TEST` describe una precondición, no un nuevo estado formal. `PASS` es evidencia técnica, no aprobación. Antes de un efecto externo, comprueba autorización demostrable, destino, precondiciones y límites de intentos. Si no puede demostrar autorización suficiente, no produce el efecto. La incertidumbre posterior obliga a detenerse y reportar; no autoriza repetir el efecto ni ampliar la actuación. Realiza el cierre/limpieza local autorizado —incluida la remoción del worktree auxiliar cuando haya sido expresamente autorizada— y registra cualquier fallo sin improvisar reparaciones. La limpieza no autoriza reset destructivo, reescritura de historial ni eliminación de trabajo ajeno.
 
 ```text
 Posible defecto → STOP → evidencia → Supervisor
