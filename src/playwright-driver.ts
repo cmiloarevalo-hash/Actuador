@@ -61,12 +61,77 @@ export class PlaywrightPromptDeliveryDriver implements PromptDeliveryDriver {
 
   async readPrompt(): Promise<string> {
     const input = this.requirePromptInput();
-    return input.evaluate((element) => {
-      if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-        return element.value;
+    const result = await input.evaluate((element) => {
+      if (element.tagName === "INPUT") {
+        return { kind: "ok" as const, value: (element as HTMLInputElement).value };
       }
-      return element.textContent ?? "";
+      if (element.tagName === "TEXTAREA") {
+        return { kind: "ok" as const, value: (element as HTMLTextAreaElement).value };
+      }
+
+      const htmlElement = element as HTMLElement;
+      if (!htmlElement.isContentEditable) {
+        return { kind: "ok" as const, value: element.textContent ?? "" };
+      }
+
+      const unsupported = (detail: string) => ({
+        kind: "unsupported" as const,
+        detail
+      });
+      const paragraphs = Array.from(element.childNodes);
+      if (paragraphs.length === 0) {
+        return unsupported("Contenteditable prompt root has no direct paragraph children.");
+      }
+
+      const lines: string[] = [];
+      for (let paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex += 1) {
+        const paragraph = paragraphs[paragraphIndex];
+        if (paragraph === undefined || paragraph.nodeType !== 1 || paragraph.nodeName !== "P") {
+          return unsupported(
+            `Contenteditable prompt root child ${paragraphIndex} is not a direct P element.`
+          );
+        }
+
+        const children = Array.from(paragraph.childNodes);
+        if (
+          children.length === 1 &&
+          children[0]?.nodeType === 1 &&
+          children[0].nodeName === "BR"
+        ) {
+          lines.push("");
+          continue;
+        }
+        if (children.length === 0) {
+          return unsupported(
+            `Contenteditable prompt paragraph ${paragraphIndex} is empty without a sole BR placeholder.`
+          );
+        }
+
+        let text = "";
+        for (let childIndex = 0; childIndex < children.length; childIndex += 1) {
+          const child = children[childIndex];
+          if (child === undefined || child.nodeType !== 3 || child.nodeValue === null) {
+            return unsupported(
+              `Contenteditable prompt paragraph ${paragraphIndex} child ${childIndex} is not a text node.`
+            );
+          }
+          text += child.nodeValue;
+        }
+        if (text.length === 0) {
+          return unsupported(
+            `Contenteditable prompt paragraph ${paragraphIndex} has empty text instead of a sole BR placeholder.`
+          );
+        }
+        lines.push(text);
+      }
+
+      return { kind: "ok" as const, value: lines.join("\n") };
     });
+
+    if (result.kind === "unsupported") {
+      throw new ActuationError("UNSUPPORTED_CONTENTEDITABLE_STRUCTURE", result.detail);
+    }
+    return result.value;
   }
 
   async locateSendControl(): Promise<void> {
