@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test dist/tests/actuation-core.test.js dist/tests/config.test.js dist/tests/github-reader.test.js dist/tests/workflow-context-adapter.test.js dist/tests/integrated-context-runner.test.js dist/tests/local-context-entry.test.js dist/tests/real-read-only-proof.test.js dist/tests/actuation-request-validator.test.js dist/tests/prompt-builder.test.js dist/tests/web-session-binding.test.js",
+    "test": "npm run build && node --test dist/tests/actuation-core.test.js dist/tests/config.test.js dist/tests/github-reader.test.js dist/tests/workflow-context-adapter.test.js dist/tests/integrated-context-runner.test.js dist/tests/local-context-entry.test.js dist/tests/real-read-only-proof.test.js dist/tests/actuation-request-validator.test.js dist/tests/prompt-builder.test.js dist/tests/web-session-binding.test.js dist/tests/web-session-coordinator.test.js",
     "verify:m2": "node dist/src/m2-context-cli.js",
     "start": "node dist/src/main.js"
   },
