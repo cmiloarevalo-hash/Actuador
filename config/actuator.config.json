@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "browserMode": "managed",
   "destinationName": "m1-local-target",
   "targetUrl": "https://example.invalid/",
   "expectedUrlPrefix": "https://example.invalid/",

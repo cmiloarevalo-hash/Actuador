@@ -20,6 +20,7 @@ interface EvaluateLocator {
 
 const config: ActuatorConfig = {
   version: 1,
+  browserMode: "managed",
   destinationName: "test",
   targetUrl: "https://example.test/conversation",
   expectedUrlPrefix: "https://example.test/conversation",
@@ -174,4 +175,18 @@ test("preserves HTML textarea .value behavior unchanged", async () => {
     childNodes: []
   });
   assert.equal(await driver.readPrompt(), "first\n\nthird  ");
+});
+
+test("fails closed when the configured CDP endpoint is unavailable", async () => {
+  const driver = new PlaywrightPromptDeliveryDriver({
+    ...config,
+    browserMode: "cdp",
+    cdpEndpoint: "http://127.0.0.1:1"
+  });
+
+  await assert.rejects(driver.openActor(), (error: unknown) => {
+    assert.ok(error instanceof ActuationError);
+    assert.equal(error.code, "BROWSER_OPEN_FAILED");
+    return true;
+  });
 });

@@ -5,6 +5,7 @@ import { ActuationError, type ActuatorConfig, type PromptDeliveryDriver } from "
 
 const config: ActuatorConfig = {
   version: 1,
+  browserMode: "managed",
   destinationName: "test",
   targetUrl: "https://example.test/conversation",
   expectedUrlPrefix: "https://example.test/conversation",

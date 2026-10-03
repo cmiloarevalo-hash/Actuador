@@ -142,6 +142,7 @@ function request(
 function m1Config(actor: "IMPLEMENTER_WEB" | "SUPERVISOR_WEB"): Omit<ActuatorConfig, "prompt"> {
   return {
     version: 1,
+    browserMode: "managed",
     destinationName: actor,
     targetUrl: `https://example.test/${actor.toLowerCase()}`,
     expectedUrlPrefix: `https://example.test/${actor.toLowerCase()}`,
@@ -639,7 +640,6 @@ test("Playwright driver source exposes only own-input post-Send confirmation, no
   const source = await readFile("src/playwright-driver.ts", "utf8");
   for (const forbidden of [
     "newCDPSession",
-    "connectOverCDP",
     "page.on(\"response\"",
     "page.on('response'",
     "websocket",

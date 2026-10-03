@@ -1,9 +1,10 @@
-import { chromium, type BrowserContext, type Locator, type Page } from "playwright-core";
+import { chromium, type Browser, type BrowserContext, type Locator, type Page } from "playwright-core";
 import type { ActuatorConfig, LocatorSpec, PromptDeliveryDriver } from "./types.js";
 import { ActuationError } from "./types.js";
 
 export class PlaywrightPromptDeliveryDriver implements PromptDeliveryDriver {
   private context: BrowserContext | undefined;
+  private browser: Browser | undefined;
   private page: Page | undefined;
   private promptInput: Locator | undefined;
   private sendControl: Locator | undefined;
@@ -13,10 +14,24 @@ export class PlaywrightPromptDeliveryDriver implements PromptDeliveryDriver {
 
   async openActor(): Promise<void> {
     try {
-      this.context = await chromium.launchPersistentContext(this.config.profileDir, {
-        headless: false
-      });
-      this.page = this.context.pages()[0] ?? (await this.context.newPage());
+      if (this.config.browserMode === "cdp") {
+        this.browser = await chromium.connectOverCDP(this.config.cdpEndpoint!);
+        const contexts = this.browser.contexts();
+        if (contexts.length !== 1 || contexts[0] === undefined || contexts[0].pages().length !== 1) {
+          throw new ActuationError("CDP_SESSION_AMBIGUOUS", "CDP must expose exactly one context with exactly one page.");
+        }
+        this.context = contexts[0];
+        const page = this.context.pages()[0];
+        if (!page) {
+          throw new ActuationError("CDP_SESSION_AMBIGUOUS", "CDP page disappeared during session validation.");
+        }
+        this.page = page;
+      } else {
+        this.context = await chromium.launchPersistentContext(this.config.profileDir, {
+          headless: false
+        });
+        this.page = this.context.pages()[0] ?? (await this.context.newPage());
+      }
       await this.page.goto(this.config.targetUrl, {
         waitUntil: "domcontentloaded",
         timeout: this.config.timeoutMs
@@ -26,6 +41,9 @@ export class PlaywrightPromptDeliveryDriver implements PromptDeliveryDriver {
       const code = /profile|user data|singleton|already in use/i.test(message)
         ? "PROFILE_LOCKED"
         : "BROWSER_OPEN_FAILED";
+      if (error instanceof ActuationError) {
+        throw error;
+      }
       throw new ActuationError(code, message);
     }
   }
@@ -169,7 +187,12 @@ export class PlaywrightPromptDeliveryDriver implements PromptDeliveryDriver {
   }
 
   async close(): Promise<void> {
-    await this.context?.close();
+    if (this.browser) {
+      await this.browser.close();
+    } else {
+      await this.context?.close();
+    }
+    this.browser = undefined;
     this.context = undefined;
     this.page = undefined;
     this.promptInput = undefined;
