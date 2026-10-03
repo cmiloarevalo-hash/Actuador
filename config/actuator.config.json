@@ -1,11 +1,11 @@
 {
   "version": 1,
+  "browserMode": "managed",
   "destinationName": "m1-local-target",
   "targetUrl": "https://example.invalid/",
   "expectedUrlPrefix": "https://example.invalid/",
   "profileDir": ".actuador/playwright-profile",
   "logDir": ".actuador/logs",
-  "browserChannel": "chrome",
   "prompt": "M1_PLAYWRIGHT_PROMPT_DELIVERY_TEST",
   "timeoutMs": 15000,
   "postSendTimeoutMs": 5000,

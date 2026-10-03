@@ -52,9 +52,26 @@ export function validateConfig(raw: unknown, cwd = process.cwd()): ActuatorConfi
     throw new ActuationError("CONFIG_INVALID", "Configuration version must be 1.");
   }
 
-  const browserChannel = requiredString(source, "browserChannel");
-  if (browserChannel !== "chrome" && browserChannel !== "msedge") {
-    throw new ActuationError("CONFIG_INVALID", "browserChannel must be chrome or msedge.");
+  const browserMode = source.browserMode === undefined ? "managed" : requiredString(source, "browserMode");
+  if (browserMode !== "managed" && browserMode !== "cdp") {
+    throw new ActuationError("CONFIG_INVALID", "browserMode must be managed or cdp.");
+  }
+  const cdpEndpoint = source.cdpEndpoint === undefined ? undefined : requiredString(source, "cdpEndpoint");
+  if (browserMode === "cdp") {
+    if (!cdpEndpoint) {
+      throw new ActuationError("CONFIG_INVALID", "cdpEndpoint is required when browserMode is cdp.");
+    }
+    let endpoint: URL;
+    try {
+      endpoint = new URL(cdpEndpoint);
+    } catch {
+      throw new ActuationError("CONFIG_INVALID", "cdpEndpoint must be an absolute HTTP URL.");
+    }
+    if (endpoint.protocol !== "http:" || endpoint.hostname !== "127.0.0.1") {
+      throw new ActuationError("CONFIG_INVALID", "cdpEndpoint must use http://127.0.0.1.");
+    }
+  } else if (cdpEndpoint !== undefined) {
+    throw new ActuationError("CONFIG_INVALID", "cdpEndpoint is only valid when browserMode is cdp.");
   }
 
   const selectors = record(source.selectors);
@@ -69,12 +86,13 @@ export function validateConfig(raw: unknown, cwd = process.cwd()): ActuatorConfi
 
   return {
     version: 1,
+    browserMode,
+    ...(cdpEndpoint === undefined ? {} : { cdpEndpoint }),
     destinationName: requiredString(source, "destinationName"),
     targetUrl,
     expectedUrlPrefix,
     profileDir: resolve(cwd, requiredString(source, "profileDir")),
     logDir: resolve(cwd, requiredString(source, "logDir")),
-    browserChannel,
     prompt: requiredString(source, "prompt"),
     timeoutMs: positiveInteger(source, "timeoutMs"),
     postSendTimeoutMs: positiveInteger(source, "postSendTimeoutMs"),

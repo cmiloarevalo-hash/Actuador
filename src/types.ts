@@ -8,12 +8,13 @@ export type LocatorSpec =
 
 export interface ActuatorConfig {
   version: 1;
+  browserMode: "managed" | "cdp";
+  cdpEndpoint?: string;
   destinationName: string;
   targetUrl: string;
   expectedUrlPrefix: string;
   profileDir: string;
   logDir: string;
-  browserChannel: "chrome" | "msedge";
   prompt: string;
   timeoutMs: number;
   postSendTimeoutMs: number;

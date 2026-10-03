@@ -5,12 +5,12 @@ import { validateConfig } from "../src/config.js";
 
 const rawConfig = {
   version: 1,
+  browserMode: "managed",
   destinationName: "test",
   targetUrl: "https://example.test/conversation",
   expectedUrlPrefix: "https://example.test/conversation",
   profileDir: ".actuador/profile",
   logDir: ".actuador/logs",
-  browserChannel: "chrome",
   prompt: "exact prompt",
   timeoutMs: 1000,
   postSendTimeoutMs: 1000,
@@ -37,9 +37,13 @@ test("rejects an empty prompt", () => {
   );
 });
 
-test("rejects unsupported browser channels", () => {
+test("requires a loopback CDP endpoint for cdp mode", () => {
+  const config = validateConfig({ ...rawConfig, browserMode: "cdp", cdpEndpoint: "http://127.0.0.1:9222" }, "/repo");
+  assert.equal(config.browserMode, "cdp");
+  assert.equal(config.cdpEndpoint, "http://127.0.0.1:9222");
   assert.throws(
-    () => validateConfig({ ...rawConfig, browserChannel: "firefox" }, "/repo"),
-    /browserChannel must be chrome or msedge/
+    () => validateConfig({ ...rawConfig, browserMode: "cdp", cdpEndpoint: "http://0.0.0.0:9222" }, "/repo"),
+    /127\.0\.0\.1/
   );
 });
+
