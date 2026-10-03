@@ -10,12 +10,16 @@ export class PlaywrightPromptDeliveryDriver implements PromptDeliveryDriver {
   private sendControl: Locator | undefined;
   private sendUsed = false;
 
-  constructor(private readonly config: ActuatorConfig) {}
+  constructor(
+    private readonly config: ActuatorConfig,
+    private readonly connectOverCdp: (endpoint: string) => Promise<Browser> = (endpoint) =>
+      chromium.connectOverCDP(endpoint)
+  ) {}
 
   async openActor(): Promise<void> {
     try {
       if (this.config.browserMode === "cdp") {
-        this.browser = await chromium.connectOverCDP(this.config.cdpEndpoint!);
+        this.browser = await this.connectOverCdp(this.config.cdpEndpoint!);
         const contexts = this.browser.contexts();
         if (contexts.length !== 1 || contexts[0] === undefined || contexts[0].pages().length !== 1) {
           throw new ActuationError("CDP_SESSION_AMBIGUOUS", "CDP must expose exactly one context with exactly one page.");

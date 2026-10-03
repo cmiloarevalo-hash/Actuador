@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import type { Browser } from "playwright-core";
 import { PlaywrightPromptDeliveryDriver } from "../src/playwright-driver.js";
 import { ActuationError, type ActuatorConfig } from "../src/types.js";
 
@@ -189,4 +190,34 @@ test("fails closed when the configured CDP endpoint is unavailable", async () =>
     assert.equal(error.code, "BROWSER_OPEN_FAILED");
     return true;
   });
+});
+
+test("fails closed when CDP exposes zero or multiple contexts/pages without navigation", async () => {
+  for (const shape of ["zero-contexts", "zero-pages", "multiple-pages", "multiple-contexts"]) {
+    let navigated = false;
+    const page = { goto: async () => { navigated = true; } };
+    const contexts = shape === "zero-contexts"
+      ? []
+      : shape === "zero-pages"
+        ? [{ pages: () => [] }]
+        : shape === "multiple-pages"
+          ? [{ pages: () => [page, {}] }]
+          : [{ pages: () => [page] }, { pages: () => [page] }];
+    const fakeBrowser = {
+      contexts: () => contexts,
+      close: async () => undefined
+    } as unknown as Browser;
+    const driver = new PlaywrightPromptDeliveryDriver(
+      { ...config, browserMode: "cdp", cdpEndpoint: "http://127.0.0.1:9222" },
+      async () => fakeBrowser
+    );
+
+    await assert.rejects(driver.openActor(), (error: unknown) => {
+      assert.ok(error instanceof ActuationError);
+      assert.equal(error.code, "CDP_SESSION_AMBIGUOUS");
+      return true;
+    });
+    assert.equal(navigated, false);
+    await driver.close();
+  }
 });
