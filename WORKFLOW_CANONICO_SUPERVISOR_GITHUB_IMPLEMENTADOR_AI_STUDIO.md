@@ -1,5 +1,7 @@
 # Workflow canónico — Supervisor + GitHub + Agente implementador + AI_STUDIO_OPERATOR + LOCAL_AGENT_OPERATOR
 
+> **SUPERSEDED (2026-10-03):** Este workflow histórico fue reemplazado por `DOCUMENT_CONTROL_PROTOCOL.md`, `WORKFLOW_FOUNDATIONS.md` y `WORKFLOW_PLAN.md`.
+
 > **Estado:** workflow canónico activo del proyecto desde la integración de Issue #47 mediante PR #49 en `main@866d7aaa793cb9d1a2675965f911c6ddb37275e9`.
 >
 > **Baseline:** `WORKFLOW_SIMPLIFICADO_CHAT_WEB_GPT_GEMINI_3_8.md` en `main@ff1a7d46c3f9992adbcc41b933cc13c3501fc617` (blob `d6fd666d5be7659784f6f20021ba4a3515d45f14`).
