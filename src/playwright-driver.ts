@@ -157,10 +157,33 @@ export class PlaywrightPromptDeliveryDriver implements PromptDeliveryDriver {
 
   async locateSendControl(): Promise<void> {
     const control = await this.requireSingleVisible(this.config.selectors.sendButton, "SEND_CONTROL_NOT_FOUND");
-    if (!(await control.isEnabled())) {
-      throw new ActuationError("SEND_CONTROL_NOT_READY", "Send control is not enabled.");
+    const deadline = Date.now() + this.config.timeoutMs;
+    while (true) {
+      try {
+        const count = await control.count();
+        if (count !== 1) {
+          throw new ActuationError(
+            "SEND_CONTROL_NOT_READY",
+            `Expected exactly one matching Send control, found ${count}.`
+          );
+        }
+        if (await control.isEnabled()) {
+          this.sendControl = control;
+          return;
+        }
+      } catch (error) {
+        if (error instanceof ActuationError) {
+          throw error;
+        }
+        throw new ActuationError("SEND_CONTROL_NOT_READY", this.message(error));
+      }
+
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        throw new ActuationError("SEND_CONTROL_NOT_READY", "Send control is not enabled.");
+      }
+      await new Promise((resolve) => setTimeout(resolve, Math.min(25, remaining)));
     }
-    this.sendControl = control;
   }
 
   async sendPrompt(): Promise<void> {
