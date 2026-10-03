@@ -14,7 +14,6 @@ export class PlaywrightPromptDeliveryDriver implements PromptDeliveryDriver {
   async openActor(): Promise<void> {
     try {
       this.context = await chromium.launchPersistentContext(this.config.profileDir, {
-        channel: this.config.browserChannel,
         headless: false
       });
       this.page = this.context.pages()[0] ?? (await this.context.newPage());

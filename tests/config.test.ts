@@ -10,7 +10,6 @@ const rawConfig = {
   expectedUrlPrefix: "https://example.test/conversation",
   profileDir: ".actuador/profile",
   logDir: ".actuador/logs",
-  browserChannel: "chrome",
   prompt: "exact prompt",
   timeoutMs: 1000,
   postSendTimeoutMs: 1000,
@@ -37,9 +36,3 @@ test("rejects an empty prompt", () => {
   );
 });
 
-test("rejects unsupported browser channels", () => {
-  assert.throws(
-    () => validateConfig({ ...rawConfig, browserChannel: "firefox" }, "/repo"),
-    /browserChannel must be chrome or msedge/
-  );
-});

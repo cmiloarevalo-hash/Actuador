@@ -13,7 +13,7 @@ El flujo implementado es:
 ```text
 START
 ↓
-abrir Chrome/Edge con perfil dedicado
+abrir Chromium gestionado por Playwright con perfil dedicado
 ↓
 verificar marcador de sesión
 ↓
@@ -41,7 +41,7 @@ La única primitiva de envío es `click` sobre el control Send configurado. No s
 ## Requisitos
 
 - Node.js 22 o posterior.
-- Google Chrome o Microsoft Edge instalado localmente.
+- Chromium instalado mediante el CLI de la versión fijada de `playwright-core`.
 - Sesión del destino iniciada manualmente en un perfil dedicado a Actuador.
 
 Instalación y verificación:
@@ -70,7 +70,6 @@ Campos relevantes:
 - `targetUrl`: URL que Playwright abre.
 - `expectedUrlPrefix`: prefijo que debe cumplir la URL antes de actuar.
 - `profileDir`: perfil persistente y dedicado; por defecto se ubica en `.actuador/playwright-profile` y queda ignorado.
-- `browserChannel`: `chrome` o `msedge`.
 - `prompt`: texto exacto que se insertará una única vez.
 - `selectors.sessionMarker`: elemento visible solo cuando la sesión requerida está disponible.
 - `selectors.destinationMarker`: elemento que identifica inequívocamente el destino.
@@ -81,7 +80,7 @@ Los localizadores admiten `role`, `label`, `placeholder` y `css`. Deben preferir
 
 ## Perfil dedicado y login manual
 
-El código nunca introduce credenciales. Antes de la prueba de entrega, el Humano debe abrir el navegador usando el mismo directorio configurado en `profileDir`, iniciar sesión manualmente y cerrar el navegador. Después, `scripts\START.bat` reutiliza ese perfil persistente mediante Playwright.
+Instala el navegador gestionado localmente con `npx playwright-core install chromium` y verifica la instalación con `npx playwright-core install --list`. El código nunca introduce credenciales. Antes de la prueba de entrega, el Humano debe abrir Chromium usando el mismo directorio configurado en `profileDir`, iniciar sesión manualmente y cerrar el navegador. Después, `scripts\START.bat` reutiliza ese perfil persistente mediante Playwright.
 
 El perfil y los logs bajo `.actuador/` no se versionan ni se publican como artifacts.
 

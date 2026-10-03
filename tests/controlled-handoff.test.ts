@@ -147,7 +147,6 @@ function m1Config(actor: "IMPLEMENTER_WEB" | "SUPERVISOR_WEB"): Omit<ActuatorCon
     expectedUrlPrefix: `https://example.test/${actor.toLowerCase()}`,
     profileDir: `/tmp/${actor.toLowerCase()}-profile`,
     logDir: "/tmp/logs",
-    browserChannel: "chrome",
     timeoutMs: 1000,
     postSendTimeoutMs: 1000,
     selectors: {

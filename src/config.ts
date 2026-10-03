@@ -52,11 +52,6 @@ export function validateConfig(raw: unknown, cwd = process.cwd()): ActuatorConfi
     throw new ActuationError("CONFIG_INVALID", "Configuration version must be 1.");
   }
 
-  const browserChannel = requiredString(source, "browserChannel");
-  if (browserChannel !== "chrome" && browserChannel !== "msedge") {
-    throw new ActuationError("CONFIG_INVALID", "browserChannel must be chrome or msedge.");
-  }
-
   const selectors = record(source.selectors);
   const targetUrl = requiredString(source, "targetUrl");
   const expectedUrlPrefix = requiredString(source, "expectedUrlPrefix");
@@ -74,7 +69,6 @@ export function validateConfig(raw: unknown, cwd = process.cwd()): ActuatorConfi
     expectedUrlPrefix,
     profileDir: resolve(cwd, requiredString(source, "profileDir")),
     logDir: resolve(cwd, requiredString(source, "logDir")),
-    browserChannel,
     prompt: requiredString(source, "prompt"),
     timeoutMs: positiveInteger(source, "timeoutMs"),
     postSendTimeoutMs: positiveInteger(source, "postSendTimeoutMs"),

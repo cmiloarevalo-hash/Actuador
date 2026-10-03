@@ -13,7 +13,6 @@ export interface ActuatorConfig {
   expectedUrlPrefix: string;
   profileDir: string;
   logDir: string;
-  browserChannel: "chrome" | "msedge";
   prompt: string;
   timeoutMs: number;
   postSendTimeoutMs: number;

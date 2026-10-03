@@ -10,7 +10,6 @@ const config: ActuatorConfig = {
   expectedUrlPrefix: "https://example.test/conversation",
   profileDir: "/tmp/profile",
   logDir: "/tmp/logs",
-  browserChannel: "chrome",
   prompt: "exact prompt",
   timeoutMs: 1000,
   postSendTimeoutMs: 1000,
