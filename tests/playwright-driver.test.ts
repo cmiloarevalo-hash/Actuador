@@ -18,6 +18,14 @@ interface EvaluateLocator {
   evaluate<R>(pageFunction: (element: HTMLElement) => R): Promise<R>;
 }
 
+interface SendLocator {
+  first(): SendLocator;
+  waitFor(options: { state: "visible"; timeout: number }): Promise<void>;
+  count(): Promise<number>;
+  isEnabled(): Promise<boolean>;
+  click(options: { timeout: number }): Promise<void>;
+}
+
 const config: ActuatorConfig = {
   version: 1,
   destinationName: "test",
@@ -72,6 +80,25 @@ function driverFor(elementNode: FakeNode): PlaywrightPromptDeliveryDriver {
   };
   (driver as unknown as { promptInput: EvaluateLocator }).promptInput = locator;
   return driver;
+}
+
+function sendDriverFor(states: Array<{ count: number; enabled: boolean }>): {
+  driver: PlaywrightPromptDeliveryDriver;
+  readonly clicks: number;
+} {
+  let poll = 0;
+  let clicks = 0;
+  const locator: SendLocator = {
+    first: () => locator,
+    waitFor: async () => undefined,
+    count: async () => states[Math.min(poll, states.length - 1)]?.count ?? 0,
+    isEnabled: async () => states[Math.min(poll++, states.length - 1)]?.enabled ?? false,
+    click: async () => { clicks += 1; }
+  };
+  const page = { locator: () => locator };
+  const driver = new PlaywrightPromptDeliveryDriver({ ...config, timeoutMs: 100 });
+  (driver as unknown as { page: typeof page }).page = page;
+  return { driver, get clicks() { return clicks; } };
 }
 
 test("reads the exact four-paragraph real diagnostic probe with one blank line", async () => {
@@ -175,4 +202,48 @@ test("preserves HTML textarea .value behavior unchanged", async () => {
     childNodes: []
   });
   assert.equal(await driver.readPrompt(), "first\n\nthird  ");
+});
+
+test("waits for a disabled Send control to become enabled", async () => {
+  const { driver } = sendDriverFor([
+    { count: 1, enabled: false },
+    { count: 1, enabled: false },
+    { count: 1, enabled: true }
+  ]);
+
+  await driver.locateSendControl();
+  await driver.sendPrompt();
+});
+
+test("fails closed when Send remains disabled", async () => {
+  const { driver } = sendDriverFor([{ count: 1, enabled: false }]);
+
+  await assert.rejects(driver.locateSendControl(), (error: unknown) => {
+    assert.ok(error instanceof ActuationError);
+    assert.equal(error.code, "SEND_CONTROL_NOT_READY");
+    return true;
+  });
+});
+
+test("Send readiness never clicks the control", async () => {
+  const result = sendDriverFor([{ count: 1, enabled: false }, { count: 1, enabled: true }]);
+
+  await result.driver.locateSendControl();
+  assert.equal(result.clicks, 0);
+});
+
+test("accepts an already enabled Send control without regression", async () => {
+  const { driver } = sendDriverFor([{ count: 1, enabled: true }]);
+
+  await driver.locateSendControl();
+});
+
+test("fails closed when Send becomes ambiguous during readiness", async () => {
+  const { driver } = sendDriverFor([{ count: 1, enabled: false }, { count: 2, enabled: false }]);
+
+  await assert.rejects(driver.locateSendControl(), (error: unknown) => {
+    assert.ok(error instanceof ActuationError);
+    assert.equal(error.code, "SEND_CONTROL_NOT_READY");
+    return true;
+  });
 });
