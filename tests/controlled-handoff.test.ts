@@ -562,7 +562,7 @@ test("exact proof authorization plus all gates reaches existing M1 once with a f
   assert.equal(driver.sendCount, 1);
   assert.match(
     driver.insertedPrompt,
-    /^$/ 
+    /^$/
   );
 
   const preparedAgain = await prepareControlledHandoff(handoffInput);
